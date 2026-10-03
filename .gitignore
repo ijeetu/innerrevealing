@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+*.tsbuildinfo
+.env*
+!.env.example
+coverage/
+.vercel/
+next-env.d.ts
+
+# Local source material and design research
+.design-reference/
+output/
+/Inner Revealing - Website Content (New Structure).docx
