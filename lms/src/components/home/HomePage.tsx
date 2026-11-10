@@ -1,266 +1,91 @@
 'use client'
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { ArrowRight, Leaf, Sparkles, Wind } from 'lucide-react'
 import Layout from '../layout/Layout'
-import HeroSect from './sections/HeroSect'
-import Journey from './sections/Journey'
-import TopCategories from './sections/TopCategories'
-import CommonCoursesSection from './sections/CommonCoursesSection'
-import WhyChooseUs from './sections/WhyChooseUs'
-import InstructorCommunity from './sections/InstructorCommunity'
-import ExpertEducatorsSect from './sections/ExpertEducatorsSect'
-import Faqs from './sections/Faqs'
-import Testimonials from './sections/Testimonials'
-import ContinueLearning from './sections/ContinueLearning'
-import { useSelector } from 'react-redux'
-import { isLoginSelector } from '@/redux/reducers/userSlice'
+import CourseCard from '../cards/CourseCard'
+import { getCourses } from '@/utils/api/user/getCourses'
+import { Course } from '@/types'
+import './wellness-home.css'
 
-import { FeatureSectionData, getFeatureSections, WhyChooseUsType } from '@/utils/api/user/getFeatureSection'
-import { Course, educatorCardDataTypes } from '@/types'
-import { extractErrorMessage } from '@/utils/helpers'
-import CourseSectionSkeleton from '../skeletons/home/CourseSectionSkeleton'
-import { toast } from 'react-hot-toast'
-import CustomImageTag from '../commonComp/customImage/CustomImageTag'
-import { FaqData, getFaqs } from '@/utils/api/user/getFaqs'
-import { settingsSelector } from '@/redux/reducers/settingsSlice'
+const practices = [
+  { title: 'Meditation', tag: 'COME BACK TO STILLNESS', description: 'Guided practices to pause, turn inward and make space for yourself.', image: '/images/wellness/meditation.webp', href: '/courses/search/meditation', icon: Sparkles },
+  { title: 'Yoga & Breathwork', tag: 'MOVE. BREATHE. BE.', description: 'Explore mindful movement and a gentler connection with your breath.', image: '/images/wellness/yoga-breathing.webp', href: '/courses/search/yoga', icon: Wind },
+  { title: 'Personal Growth', tag: 'GET TO KNOW YOURSELF', description: 'Explore mindfulness, self-awareness and a more compassionate way of living.', image: '/images/wellness/personal-growth.webp', href: '/courses/search/mindfulness', icon: Leaf },
+]
 
+export default function HomePage() {
+  const [courses, setCourses] = useState<Course[]>([])
 
-const HomePage: React.FC = () => {
-  // selectors 
-  const isLogin = useSelector(isLoginSelector);
-  const setting = useSelector(settingsSelector);
+  useEffect(() => {
+    let active = true
+    getCourses({ search: 'meditation', per_page: 4, page: 1 }).then(response => {
+      if (active && response && !response.error) setCourses(response.data?.data ?? [])
+    })
+    return () => { active = false }
+  }, [])
 
-  const [isClient, setIsClient] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const hasScrolled = useRef(false);
-
-  const [sections, setSections] = useState<FeatureSectionData[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const getFeatureSectionsData = async () => {
-    try {
-      setLoading(true);
-      const response = await getFeatureSections();
-
-      if (response) {
-        // Check if API returned an error (error: true in response)
-        if (!response.error) {
-          if (response.data && response.data.length > 0) {
-            setSections(response.data);
-          } else {
-            setSections([]);
-          }
-        } else {
-          console.log("API error:", response.message);
-          toast.error(response.message || "Failed to fetch feature sections");
-          setSections([]);
-        }
-      } else {
-        console.log("response is null in component", response);
-        setSections([]);
-      }
-    } catch (error) {
-      extractErrorMessage(error);
-      setSections([]);
-    } finally {
-      setLoading(false);
-    }
+  const handleWishlistToggle = (id: number, isWishlisted: boolean) => {
+    setCourses(previous => previous.map(course => course.id === id ? { ...course, is_wishlisted: isWishlisted } : course))
   }
-
-  const handleWishlistToggle = (courseId: number, newWishlistStatus: boolean) => {
-    setSections(prevSections =>
-      prevSections.map(section => {
-        // Only update if this section contains courses
-        if (section.type !== 'offer') {
-          return {
-            ...section,
-            data: Array.isArray(section.data) ? section.data.map((course) => {
-              const courseData = course as Course;
-              return courseData.id === courseId ? { ...courseData, is_wishlisted: newWishlistStatus } : courseData;
-            }) : [],
-          };
-        }
-        return section;
-      })
-    );
-  };
-
-
-  useEffect(() => {
-    setIsClient(true)
-    getFeatureSectionsData();
-  }, [isLogin]);
-
-  // state for faqs
-  const [faqs, setFaqs] = useState<FaqData[]>([]);
-  const [loadingFaqs, setLoadingFaqs] = useState(true);
-
-  // fetch faqs
-  const fetchFaqs = async () => {
-    try {
-      setLoadingFaqs(true);
-      const response = await getFaqs();
-      if (response) {
-        if (!response.error) {
-          if (response.data && response.data.data && response.data.data.length > 0) {
-            const data = response.data.data;
-            setFaqs(data);
-          }
-          else {
-            setFaqs([]);
-          }
-        } else {
-          console.log("API error:", response.message);
-          toast.error(response.message || "Failed to fetch faqs");
-          setFaqs([]);
-        }
-      } else {
-        console.log("response is null in component", response);
-        setFaqs([]);
-      }
-    }
-    catch (error) {
-      extractErrorMessage(error);
-      setFaqs([]);
-    }
-    finally {
-      setLoadingFaqs(false);
-    }
-  }
-
-  useEffect(() => {
-    if (!isLogin) {
-      fetchFaqs();
-    } else {
-      setLoadingFaqs(false);
-    }
-  }, [isLogin]);
-
-  useEffect(() => {
-    if (!isClient) return;
-
-    let timeoutId: NodeJS.Timeout;
-    const handleScroll = () => {
-      if (window.location.pathname !== '/') return;
-      if (window.scrollY === 0) return;
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        if (window.scrollY > 0) {
-          sessionStorage.setItem('homeScrollPos', window.scrollY.toString());
-        }
-      }, 100);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timeoutId);
-    };
-  }, [isClient]);
-
-  useLayoutEffect(() => {
-    if (!isClient) return;
-
-    const savedScrollPos = sessionStorage.getItem('homeScrollPos');
-
-    if (!savedScrollPos) {
-      setIsVisible(true);
-      return;
-    }
-
-    if (!loading && !loadingFaqs && !hasScrolled.current) {
-      hasScrolled.current = true;
-      sessionStorage.removeItem('homeScrollPos');
-      window.scrollTo(0, parseInt(savedScrollPos, 10));
-      setIsVisible(true);
-    }
-  }, [loading, loadingFaqs, isClient]);
-
-  const renderSection = (section: FeatureSectionData) => {
-    // Use helper function to extract courses from section
-    const featureSection = section.data as Course[];
-
-    switch (section.type) {
-
-      case "top_rated_courses":
-        return <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "newly_added_courses":
-        return <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "offer":
-        return !isLogin && (
-          <div key={section.id} className='container commonMT commonMB '>
-            <CustomImageTag src={featureSection[0]?.image} alt='free-course-img' className='w-auto h-[200px] md:h-[250px] lg:h-[350px] rounded-[4px]' />
-          </div>
-        )
-
-      case "why_choose_us":
-        return !isLogin && <WhyChooseUs key={section.id} whyChooseUsData={featureSection as unknown as WhyChooseUsType} />;
-
-      case "top_rated_instructors":
-        return setting?.data?.instructor_mode == "multi" && <ExpertEducatorsSect key={section.id} instructors={featureSection as unknown as educatorCardDataTypes[]} />
-
-      case "free_courses":
-        return <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "wishlist":
-        return isLogin && <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "become_instructor":
-        return setting?.data?.instructor_mode == "multi" && <InstructorCommunity key={section.id} />;
-
-      case "searching_based":
-        return isLogin && <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "recommend_for_you":
-        return isLogin && <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "most_viewed_courses":
-        return isLogin && <CommonCoursesSection key={section.id} title={section.title} courses={featureSection} onWishlistToggle={handleWishlistToggle} sectionType={section?.type} />;
-
-      case "my_learning":
-        return isLogin && <ContinueLearning key={section.id} courses={featureSection} />;
-
-      default:
-        return null;
-    }
-  };
 
   return (
-    isClient &&
-    <div style={{ visibility: isVisible ? 'visible' : 'hidden' }}>
     <Layout>
-      <div className=''>
-        <HeroSect />
-        {
-          !isLogin && (
-            <Journey />
-          )
-        }
-        <TopCategories />
-        {loading ? (
-          <div className='grid grid-cols-1 gap-10 md:gap-20 commonMT commonMB'>
-            {[...Array(6)].map((_, index) => (
-              <CourseSectionSkeleton key={index} horizontalCard={index % 2 === 0} />
+      <main className="ir-home">
+        <section className="ir-hero" aria-labelledby="ir-hero-title">
+          <div className="container ir-hero-grid">
+            <div className="ir-hero-copy">
+              <span className="ir-eyebrow"><span /> INNER REVEALING · MEDITATION & YOGA</span>
+              <h1 id="ir-hero-title">A little stillness.<br />A deeper <em>you.</em></h1>
+              <p>Make space for your inner world. Explore meditation, mindful movement and practices that help you return to yourself, one gentle step at a time.</p>
+              <div className="ir-actions">
+                <a className="ir-button ir-button-primary" href="#practices">Find your practice <ArrowRight size={18} /></a>
+                <Link className="ir-button ir-button-outline" href="/contact-us">Talk to us</Link>
+              </div>
+              <div className="ir-hero-note"><Leaf size={18} /><span>For your practice. At your pace.</span></div>
+            </div>
+            <div className="ir-hero-visual">
+              <Image src="/images/wellness/meditation.webp" alt="A quiet moment of seated meditation in a sunlit room" width={1024} height={1536} priority className="ir-hero-image" />
+              <div className="ir-visual-note"><span>PAUSE & COME HOME</span><p>There is space<br />to simply be.</p></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="practices" className="container ir-practices" aria-labelledby="ir-practices-title">
+          <div className="ir-section-heading">
+            <div><span className="ir-eyebrow">THREE WAYS TO BEGIN</span><h2 id="ir-practices-title">Find what feels<br /><em>right for you.</em></h2></div>
+            <p>A focused space for meditation, yoga and personal growth. Begin with what you need today.</p>
+          </div>
+          <div className="ir-practice-grid">
+            {practices.map(({ title, tag, description, image, href, icon: Icon }) => (
+              <Link className="ir-practice-card" href={href} key={title}>
+                <div className="ir-practice-image"><Image src={image} alt={title === 'Yoga & Breathwork' ? 'A peaceful mindful breathing practice' : title === 'Personal Growth' ? 'A moment of quiet self-reflection' : 'A guided meditation practice'} width={1024} height={1536} sizes="(max-width: 700px) 100vw, 33vw" /><span><Icon size={22} /></span></div>
+                <div className="ir-practice-copy"><span className="ir-eyebrow">{tag}</span><h3>{title}<ArrowRight size={21} /></h3><p>{description}</p></div>
+              </Link>
             ))}
           </div>
-        ) : sections.map((section) => renderSection(section))}
+        </section>
 
-        {
-          !isLogin && (
-            <>
-              {
-                faqs.length > 0 && (
-                  <Faqs faqs={faqs} loadingFaqs={loadingFaqs} />
-                )
-              }
-              <Testimonials />
-            </>
-          )
-        }
-      </div>
+        {courses.length > 0 && <section className="container ir-course-section" aria-labelledby="ir-course-title">
+          <div className="ir-section-heading"><div><span className="ir-eyebrow">YOUR PRACTICE, AT HOME</span><h2 id="ir-course-title">Explore guided <em>meditations.</em></h2></div><Link className="ir-text-link" href="/courses">View practices <ArrowRight size={18} /></Link></div>
+          <div className="ir-course-grid">{courses.map(course => <CourseCard key={course.id} courseData={course} onWishlistToggle={handleWishlistToggle} />)}</div>
+        </section>}
+
+        <section className="ir-begin-section" aria-labelledby="ir-begin-title">
+          <div className="container ir-begin-grid">
+            <div><span className="ir-eyebrow">A GENTLER WAY TO GROW</span><h2 id="ir-begin-title">You don’t have to<br /><em>have it all figured out.</em></h2><p>Inner Revealing is a meditation, psychological counselling and healing centre in Kolkata. Wherever you are in your journey, there is room to begin.</p><a className="ir-text-link" href="https://www.innerrevealing.com" target="_blank" rel="noopener noreferrer">Get to know our centre <ArrowRight size={18} /></a></div>
+            <ol className="ir-steps">
+              <li><span>01</span><div><h3>Listen to yourself</h3><p>Choose meditation, yoga or a practice for personal growth.</p></div></li>
+              <li><span>02</span><div><h3>Make a little space</h3><p>Set aside a quiet moment and explore at a pace that suits you.</p></div></li>
+              <li><span>03</span><div><h3>Keep coming back</h3><p>Let your practice become a gentle part of everyday life.</p></div></li>
+            </ol>
+          </div>
+        </section>
+
+        <section className="container ir-contact-section"><div><span className="ir-eyebrow">LET’S BEGIN WITH A CONVERSATION</span><h2>Not sure where<br /><em>to start?</em></h2><p>We’re here to help you find a practice that feels right.</p></div><Link className="ir-button ir-button-primary" href="/contact-us">Connect with Inner Revealing <ArrowRight size={18} /></Link></section>
+      </main>
     </Layout>
-    </div>
   )
 }
-
-export default HomePage

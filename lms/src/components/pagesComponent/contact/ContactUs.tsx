@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import Layout from "@/components/layout/Layout";
 import Link from "next/link";
 import { MdKeyboardArrowRight } from "react-icons/md";
@@ -7,14 +7,11 @@ import { IoLocationOutline } from "react-icons/io5";
 import { FaRegEnvelope } from "react-icons/fa6";
 import { FiPhoneCall } from "react-icons/fi";
 import { useTranslation } from '@/hooks/useTranslation';
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 import { z } from "zod";
-import { contactUs } from "@/utils/api/user/contactUs";
-import { setIsLoginModalOpen } from "@/redux/reducers/helpersReducer";
 import { settingsSelector } from "@/redux/reducers/settingsSlice";
 import { currentLanguageSelector } from "@/redux/reducers/languageSlice";
-import { isLoginSelector } from "@/redux/reducers/userSlice";
 
 // Form error type - matches the ask-question pattern
 type FormErrors = {
@@ -25,30 +22,9 @@ type FormErrors = {
 
 export default function ContactUs() {
 
-  const { t, currentLanguage } = useTranslation();
+  const { t } = useTranslation();
   const settings = useSelector(settingsSelector);
   const currentLanguageCode = useSelector(currentLanguageSelector)
-
-  // Zod schema for validation - matches the ask-question pattern
-  // NOTE: .trim() ensures inputs with only spaces are treated as empty
-  // const contactFormSchema = z.object({
-  //   firstName: z
-  //     .string()
-  //     .trim()
-  //     .min(1, t("first_name_required"))
-  //     .max(100, t("first_name_max")),
-  //   email: z
-  //     .string()
-  //     .trim()
-  //     .min(1, t("email_required"))
-  //     .email(t("email_invalid"))
-  //     .max(255, t("email_max")),
-  //   message: z
-  //     .string()
-  //     .trim()
-  //     .min(1, t("message_required"))
-  //     .max(2000, t("message_max")),
-  // });
 
   const contactFormSchema = useMemo(() => z.object({
     firstName: z
@@ -83,9 +59,12 @@ export default function ContactUs() {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const isLogin = useSelector(isLoginSelector);
-  const dispatch = useDispatch();
+  const [preparedMessage, setPreparedMessage] = useState<string | null>(null);
+  const enquiryReview = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (preparedMessage) enquiryReview.current?.focus();
+  }, [preparedMessage]);
 
   // Handle input change - matches the ask-question pattern
   const handleInputChange = (field: keyof typeof formData, value: string) => {
@@ -118,40 +97,10 @@ export default function ContactUs() {
     }
   };
 
-  // Handle form submission - matches the ask-question pattern
-  const handleSubmitContact = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // prevent default HTML form submission
-    if (!isLogin) {
-      dispatch(setIsLoginModalOpen(true));
-      toast.error(t("login_first"));
-      return;
-    }
+  const handleSubmitContact = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     if (!validateForm()) return;
-    setIsLoading(true);
-    try {
-      const response = await contactUs({
-        first_name: formData.firstName,
-        email: formData.email,
-        message: formData.message,
-      });
-
-      if (response.success) {
-        toast.success(response.message || t("message_sent_successfully"));
-        // Reset form after successful submission
-        setFormData({
-          firstName: "",
-          email: "",
-          message: "",
-        });
-      } else {
-        toast.error(response.error || t("failed_to_send_message"));
-      }
-    } catch (error) {
-      console.error("Error sending contact message:", error);
-      toast.error(t("error_sending_message"));
-    } finally {
-      setIsLoading(false);
-    }
+    setPreparedMessage(`Hello Inner Revealing,\n\nMy name is ${formData.firstName.trim()}.\nEmail: ${formData.email.trim()}\n\n${formData.message.trim()}`);
   };
 
   return (
@@ -190,6 +139,7 @@ export default function ContactUs() {
               <p className="text-gray-600 text-sm">
                 {settings?.data?.contact_address}
               </p>
+              <Link href='https://www.google.com/maps/search/?api=1&query=Inner+Revealing+Meditation+Centre+Satish+Mukherjee+Road+Kalighat+Kolkata' target='_blank' rel='noopener noreferrer' className='primaryColor text-sm underline'>Get directions</Link>
             </div>
           </div>
           <div className="bg-white p-3 md:p-6 rounded-lg shadow-[0px_7px_28px_2px_#ADB3B83D] flex items-center gap-4 border borderColor">
@@ -232,11 +182,25 @@ export default function ContactUs() {
               {t("send_us_a_message")}
             </h2>
             <p className="text-gray-600">
-              {t("contact_form_description")}
+              Share your question with us. Prepare your enquiry, then choose WhatsApp or email to send it directly to our team.
             </p>
           </div>
 
-          <form className="space-y-6" onSubmit={handleSubmitContact}>
+          {preparedMessage ? (
+            <div ref={enquiryReview} tabIndex={-1} role='status' className='space-y-5 rounded-3xl border borderColor sectionBg p-6 md:p-8'>
+              <h3 className='text-2xl font-semibold'>Your enquiry is ready.</h3>
+              <p className='text-gray-600'>Review your message and choose how to send it. Your enquiry will be sent when you complete the action in WhatsApp or your email app.</p>
+              <div className='whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm text-gray-700'>{preparedMessage}</div>
+              <div className='flex flex-wrap gap-3'>
+                <Link href={`https://wa.me/919836147999?text=${encodeURIComponent(preparedMessage)}`} target='_blank' rel='noopener noreferrer' className='commonBtn'>Send on WhatsApp</Link>
+                <a href={`mailto:innerrevealing@gmail.com?subject=${encodeURIComponent('Inner Revealing enquiry')}&body=${encodeURIComponent(preparedMessage)}`} className='rounded-full border borderColor bg-white px-6 py-3 font-medium primaryColor'>Open email</a>
+              </div>
+              <button type='button' className='primaryColor underline' onClick={() => {
+                setPreparedMessage(null);
+                requestAnimationFrame(() => document.getElementById('firstName')?.focus());
+              }}>Edit enquiry</button>
+            </div>
+          ) : <form className="space-y-6" onSubmit={handleSubmitContact}>
             <div>
               <label
                 htmlFor="firstName"
@@ -294,13 +258,13 @@ export default function ContactUs() {
             <div className="flex justify-center">
               <button
                 type="submit"
-                disabled={isLoading}
                 className="commonBtn w-full md:w-max"
               >
-                {isLoading ? t("sending") : t("send_message")}
+                Prepare enquiry
               </button>
             </div>
-          </form>
+            <p className='text-sm text-gray-500'>You can review your message before sending it by WhatsApp or email.</p>
+          </form>}
         </div>
       </div>
     </Layout>

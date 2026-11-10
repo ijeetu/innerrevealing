@@ -3,11 +3,6 @@ import React, { Suspense } from "react";
 import Layout from "@/components/layout/Layout";
 import Link from "next/link";
 import { MdKeyboardArrowRight } from "react-icons/md";
-import dynamic from "next/dynamic";
-const CategorySwiper = dynamic(
-  () => import("@/components/commonComp/CategorySwiper"),
-  { ssr: false }
-);
 import CourseContent from "./CourseContent";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -45,19 +40,23 @@ const Courses: React.FC = () => {
               </div>
               <div className="flexColCenter items-start gap-2">
                 <h1 className="font-semibold text-2xl sm:text-3xl md:text-3xl lg:text-[40px]">
-                  {t("unlock_learning_pathways_by_categories")}
+                  Meditation practices
                 </h1>
                 <p className="sectionPara lg:w-[52%]">
-                  {t("courses_description")}
+                  Make time to pause, reconnect and grow. Explore a practice that feels right for you.
                 </p>
               </div>
             </div>
           </div>
-          <CategorySwiper />
+          <nav aria-label="Practice areas" className="container flex flex-wrap gap-3 pt-6">
+            <Link href='/courses/search/meditation' aria-current='page' className='commonBtn'>Meditation</Link>
+            <Link href='/courses/search/yoga' className='rounded-full border borderColor bg-white px-6 py-3 font-medium hover:primaryColor'>Yoga</Link>
+            <Link href='/courses/search/mindfulness' className='rounded-full border borderColor bg-white px-6 py-3 font-medium hover:primaryColor'>Personal growth</Link>
+          </nav>
         </div>
 
         <Suspense fallback={<CourseContentLoading />}>
-          <CourseContent />
+          <CourseContent search="meditation" />
         </Suspense>
       </div>
     </Layout>

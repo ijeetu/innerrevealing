@@ -13,6 +13,7 @@ const Footer = () => {
   const copyrightText = settings?.data?.website_copyright;
 
   const currentYear = new Date().getFullYear();
+  const companyName = process.env.NEXT_PUBLIC_WEB_NAME || 'Inner Revealing';
 
   return (
     <div className="px-4 py-5 secondaryBg border-t text-center text-sm text-gray-500">
@@ -23,7 +24,7 @@ const Footer = () => {
           </div>
         ) : (
           <p className="text-gray-300">
-            {t('copyright')}  ©  {currentYear} {t('all_rights_reserved')} <Link href={'https://wrteam.in'} title={t('wrteam')} target='_blank' className='text-white font-semibold underline'> {t('wrteam')}</Link>
+            {t('copyright')}  ©  {currentYear} {t('all_rights_reserved')} <Link href='https://www.innerrevealing.com' title={companyName} target='_blank' rel='noopener noreferrer' className='text-white font-semibold underline'> {companyName}</Link>
           </p>
         )
       }

@@ -65,7 +65,7 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
             description: course?.meta_description || process.env.NEXT_PUBLIC_DESCRIPTION,
             images: course?.image || process.env.NEXT_PUBLIC_IMAGE,
             type: "website",
-            siteName: "WRTeam",
+            siteName: process.env.NEXT_PUBLIC_WEB_NAME || "Inner Revealing",
             locale: "en_US",
         },
         twitter: {

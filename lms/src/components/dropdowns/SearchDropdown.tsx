@@ -97,15 +97,16 @@ const SearchDropdown = () => {
             onClick={() => setIsSearchOpen(true)}
         >
             <div className='w-full h-full flexCenter !justify-between'>
-                <form onSubmit={handleSearch} className='flex items-center gap-2 w-full'>
+                <form onSubmit={handleSearch} className='flex items-center w-full'>
                     <input
                         type="text"
-                        placeholder={t("search_placeholder")}
-                        className="focus:outline-hidden w-full"
+                        placeholder="Search meditation, yoga, breathwork…"
+                        aria-label="Search practices"
+                        className="focus:outline-hidden min-w-0 flex-1 px-4"
                         value={search}
                         onChange={(e) => onClickSearch(e.target.value)}
                     />
-                    <button type='submit' className='flexCenter bg-black w-14 h-12 ltr:rounded-r-[4px] rtl:rounded-l-[4px]'>
+                    <button type='submit' aria-label="Search" className='flexCenter primaryBg hover:hoverBgColor w-14 h-12 shrink-0 ltr:rounded-r-xl rtl:rounded-l-xl'>
                         <FiSearch className='text-xl text-white' />
                     </button>
                 </form>

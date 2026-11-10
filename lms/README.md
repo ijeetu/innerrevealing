@@ -12,6 +12,8 @@ For production, configure `.env`, run `npm run build`, then `PORT=8010 npm start
 
 `NEXT_PUBLIC_WEB_NAME` and `NEXT_PUBLIC_WEB_LOGO` override the API's name and logo. Clarity analytics are disabled unless `NEXT_PUBLIC_CLARITY_PROJECT_ID` is supplied. Firebase authentication and push notifications stay inactive while configuration is absent or contains placeholders.
 
+The frontend uses a calm meditation and yoga theme with three practice areas: Meditation, Yoga & Breathwork, and Personal Growth. Contact details and social links come from the existing Inner Revealing website. The contact form prepares an enquiry for the visitor to send through the centre's official WhatsApp or email; it does not submit enquiries to the demo API.
+
 The initial deployment uses the supplied vendor demo API. The production eLMS backend, Firebase project, course data and payment configuration must be supplied separately before learner onboarding.
 
 See [deployment instructions](deploy/README.md) for the server path, service, logs and update procedure. Run `npx tsc --noEmit` and `npm run build` to verify changes.

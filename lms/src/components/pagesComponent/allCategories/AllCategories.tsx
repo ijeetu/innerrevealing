@@ -1,44 +1,35 @@
 'use client'
-import CategoryCard from '@/components/cards/CategoryCard'
 import Breadcrumb from '@/components/commonComp/Breadcrumb'
 import Layout from '@/components/layout/Layout'
-import React from 'react'
-import { CategoryDataType } from '@/types'
-import { useSelector } from 'react-redux'
-import { categoryDataSelector, categoryLimit, totalCates } from '@/redux/reducers/categorySlice'
-import { setCateOffset } from '@/utils/helpers'
-import { useTranslation } from '@/hooks/useTranslation';
+import Link from 'next/link'
+import { FiArrowUpRight } from 'react-icons/fi'
+
+const practiceAreas = [
+  { title: 'Meditation', search: 'meditation', description: 'Find a little stillness and reconnect with yourself through guided meditation.' },
+  { title: 'Yoga', search: 'yoga', description: 'Bring breath, movement and awareness together in your daily practice.' },
+  { title: 'Personal growth', search: 'mindfulness', description: 'Explore self-awareness and mindfulness as you grow at your own pace.' },
+];
 
 const AllCategories = () => {
-
-  const categories = useSelector(categoryDataSelector);
-  const cateLimit = useSelector(categoryLimit)
-  const totalCatesCount = useSelector(totalCates)
-  const { t } = useTranslation();
   return (
     <Layout>
       <div className='commonGap'>
-        <Breadcrumb firstElement={t("all_categories")} title={t("all_categories")} />
+        <Breadcrumb firstElement='Practice areas' title='Find your practice' />
         <section className='container space-y-6 mb-12'>
           <div className='flexColCenter items-start gap-2'>
-            <h2 className='sectionTitle'>{t("explore_top_cat")}</h2>
-            <p className='sectionPara lg:w-[52%]'>{t("explore_top_cat_description")}</p>
+            <h2 className='sectionTitle'>Three ways to reconnect.</h2>
+            <p className='sectionPara lg:w-[52%]'>Choose a focus and explore the practices available to support your journey.</p>
           </div>
-          <div className='grid sm:grid-cols-2 lg:grid-cols-4 gap-6'>
-            {
-              categories?.map((cate: CategoryDataType, index) => {
-                return <CategoryCard data={cate} key={index} />
-              })
-            }
+          <div className='grid md:grid-cols-3 gap-6'>
+            {practiceAreas.map((area) => (
+              <Link key={area.search} href={`/courses/search/${area.search}`} className='rounded-3xl border borderColor bg-white p-8 space-y-5 hover:primaryColor'>
+                <h3 className='text-2xl font-semibold flex items-center justify-between gap-4'>{area.title}<FiArrowUpRight aria-hidden='true' /></h3>
+                <p className='sectionPara'>{area.description}</p>
+                <span className='inline-block primaryColor font-medium'>Explore practices</span>
+              </Link>
+            ))}
           </div>
-          {
-            totalCatesCount > cateLimit && totalCatesCount !== categories?.length &&
-            <div className='flexCenter mt-8 md:mt-12'>
-              <button className='commonBtn' onClick={() => setCateOffset(1)}>{t("load_more_categories")}</button>
-            </div>
-          }
         </section>
-
       </div>
     </Layout>
   )

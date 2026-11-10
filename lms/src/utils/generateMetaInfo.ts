@@ -80,7 +80,7 @@ export async function generateMetaInfo(params: GenerateMetaInfoParams): Promise<
           title: fallbackTitle,
           description: fallbackDescription,
           type: "website",
-          siteName: "WRTeam",
+          siteName: process.env.NEXT_PUBLIC_WEB_NAME || "Inner Revealing",
           locale: "en_US",
         },
         twitter: {
@@ -114,7 +114,7 @@ export async function generateMetaInfo(params: GenerateMetaInfoParams): Promise<
         description: seo.meta_description || fallbackDescription,
         images: seo.og_image ? [seo.og_image] : [],
         type: "website",
-        siteName: "WRTeam",
+        siteName: process.env.NEXT_PUBLIC_WEB_NAME || "Inner Revealing",
         locale: seo.language_code === "en" ? "en_US" : `${seo.language_code}_${seo.language_code.toUpperCase()}`,
       },
       twitter: {
@@ -146,7 +146,7 @@ export async function generateMetaInfo(params: GenerateMetaInfoParams): Promise<
         title: fallbackTitle,
         description: fallbackDescription,
         type: "website",
-        siteName: "WRTeam",
+        siteName: process.env.NEXT_PUBLIC_WEB_NAME || "Inner Revealing",
         locale: "en_US",
       },
       twitter: {

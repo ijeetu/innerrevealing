@@ -3,16 +3,12 @@ import React from 'react';
 import Link from 'next/link';
 import { HiOutlineLocationMarker } from "react-icons/hi";
 import { RiMailSendLine } from "react-icons/ri";
-import { FiPhoneCall } from "react-icons/fi";
-import android from '../../assets/images/android.svg'
-import ios from '../../assets/images/ios.svg'
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { FiExternalLink, FiPhoneCall } from "react-icons/fi";
+import { FaFacebookF, FaInstagram, FaYoutube } from "react-icons/fa6";
 import { useTranslation } from '@/hooks/useTranslation';
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { settingsSelector } from '@/redux/reducers/settingsSlice';
-import CustomImageTag from '../commonComp/customImage/CustomImageTag';
 import { currentLanguageSelector } from '@/redux/reducers/languageSlice';
 import RichTextContent from '../commonComp/RichText';
 import { getDirection } from '@/utils/helpers';
@@ -25,7 +21,8 @@ const Footer: React.FC = () => {
   const socialMedias = settings?.data?.social_media;
   const currentYear = new Date().getFullYear();
   const currentLanguageCode = useSelector(currentLanguageSelector);
-  const pathname = usePathname();
+  const companyName = process.env.NEXT_PUBLIC_WEB_NAME || 'Inner Revealing';
+  const socialIcons = { Facebook: FaFacebookF, Instagram: FaInstagram, YouTube: FaYoutube };
 
   const [isMounted, setIsMounted] = useState(false);
 
@@ -41,10 +38,10 @@ const Footer: React.FC = () => {
   }
 
   return (
-    <footer className={`bg-[#010211] text-gray-300 pt-12 space-y-8 md:space-y-12 lg:space-y-16 `} dir={getDirection() as "ltr" | "rtl"}>
+    <footer className={`bg-[#2d2039] text-gray-300 pt-12 space-y-8 md:space-y-12 lg:space-y-16 `} dir={getDirection() as "ltr" | "rtl"}>
       {/* Contact Information */}
       <div className="container space-y-8 md:space-y-12 lg:space-y-16">
-        <div className="bg-[#2A2A37] rounded-2xl p-6 md:p-10 grid lg:grid-cols-3 gap-y-6 lg:gap-16">
+        <div className="bg-[#3b2c49] rounded-2xl p-6 md:p-10 grid lg:grid-cols-3 gap-y-6 lg:gap-16">
           <div className="flex items-center lg:pr-6 lg:ltr:border-r lg:rtl:border-l border-[#9797a547] border-b pb-3 lg:border-b-0 lg:pb-0">
             <div className="bg-[#FFFFFF1F] p-3 rounded-full ltr:mr-4 rtl:ml-4">
               <HiOutlineLocationMarker className="text-white" size={26} />
@@ -77,7 +74,7 @@ const Footer: React.FC = () => {
         </div>
 
         {/* Footer Links */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className='space-y-6'>
             <h2 className="text-white font-semibold text-lg mb-6">{t('about_us')}</h2>
             <p className="text-sm ">
@@ -87,11 +84,12 @@ const Footer: React.FC = () => {
               <h3 className="text-white font-medium mb-2">{t('follow_us')}</h3>
               <div className="flex space-x-3 text-white">
                 {
-                  socialMedias?.map((social) => (
-                    <Link href={social.url || ''} key={social.id} target='_blank' className="bg-[#FFFFFF1F] p-2 rounded-full">
-                      <CustomImageTag src={social.icon} alt={social.name} className='w-4 h-4' />
-                    </Link>
-                  ))
+                  socialMedias?.map((social) => {
+                    const SocialIcon = socialIcons[social.name as keyof typeof socialIcons] || FiExternalLink;
+                    return <Link href={social.url || ''} key={social.id} target='_blank' rel='noopener noreferrer' aria-label={`${companyName} on ${social.name}`} className="bg-[#FFFFFF1F] p-2 rounded-full">
+                      <SocialIcon className='w-4 h-4' aria-hidden='true' />
+                    </Link>;
+                  })
                 }
               </div>
             </div>
@@ -104,19 +102,22 @@ const Footer: React.FC = () => {
                 <Link href={`/?lang=${currentLanguageCode}`} className="">{t('home')}</Link>
               </li>
               <li>
-                <Link href={`/about-us?lang=${currentLanguageCode}`} className="">{t('about_us')}</Link>
+                <Link href='https://www.innerrevealing.com' target='_blank' rel='noopener noreferrer'>Our centre</Link>
               </li>
               <li>
-                <Link href={`/courses?lang=${currentLanguageCode}`} className="">{t('courses')}</Link>
+                <Link href={`/courses?lang=${currentLanguageCode}`} className="">Meditation practices</Link>
               </li>
               <li>
-                <Link href={`/instructors?lang=${currentLanguageCode}`} className="">{t('instructor')}</Link>
+                <Link href='/courses/search/yoga'>Yoga &amp; breathwork</Link>
               </li>
               <li>
-                <Link href={`/help-support?lang=${currentLanguageCode}`} className="">{t('help_support')}</Link>
+                <Link href='/courses/search/mindfulness'>Personal growth</Link>
               </li>
               <li>
                 <Link href={`/contact-us?lang=${currentLanguageCode}`} className="">{t('contact_us')}</Link>
+              </li>
+              <li>
+                <Link href='https://www.innerrevealing.com' target='_blank' rel='noopener noreferrer'>Inner Revealing website</Link>
               </li>
             </ul>
           </div>
@@ -139,25 +140,11 @@ const Footer: React.FC = () => {
             </ul>
           </div>
 
-          <div className='flexColCenter !items-start !justify-start commonTextGap'>
-            <h2 className="text-white font-semibold text-lg">{t('get_the_mobile_app')}</h2>
-            <p className="text-sm">
-              {t('mobile_app_description')}
-            </p>
-            <div className="flex gap-5 mt-4">
-              <Link href={settings?.data?.playstore_url || ''} target='_blank' className="inline-block">
-                <Image src={android} alt={t('get_it_on_google_play')} className="w-auto h-auto" />
-              </Link>
-              <Link href={settings?.data?.appstore_url || ''} target='_blank' className="inline-block">
-                <Image src={ios} alt={t('download_on_the_app_store')} className="w-auto h-auto" />
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Copyright */}
-      <div className="bg-[#2A2A37] py-4 md:py-6">
+      <div className="bg-[#3b2c49] py-4 md:py-6">
         <div className="text-center">
           {
             copyrightText ? (
@@ -166,7 +153,7 @@ const Footer: React.FC = () => {
               </div>
             ) : (
               <p className="text-gray-300">
-                {t('copyright')}  ©  {currentYear} {t('all_rights_reserved')} <Link href={'https://wrteam.in'} title={t('wrteam')} target='_blank' className='text-white font-semibold underline'> {t('wrteam')}</Link>
+                {t('copyright')}  ©  {currentYear} {t('all_rights_reserved')} <Link href='https://www.innerrevealing.com' title={companyName} target='_blank' rel='noopener noreferrer' className='text-white font-semibold underline'> {companyName}</Link>
               </p>
             )
           }
