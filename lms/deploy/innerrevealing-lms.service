@@ -1,0 +1,23 @@
+[Unit]
+Description=Inner Revealing LMS web
+After=network.target
+
+[Service]
+Type=simple
+User=innerrevealing
+Group=innerrevealing
+WorkingDirectory=/home/innerrevealing/htdocs/ir.vishwalabs.com
+Environment=NODE_ENV=production
+Environment=PORT=8010
+Environment=PATH=/opt/node22-v22.23.2/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/opt/node22-v22.23.2/bin/node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 8010
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

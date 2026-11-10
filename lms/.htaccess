@@ -1,0 +1,11 @@
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^_next/(.*) /.next/$1 [L]
+# Allow access to static files with specific extensions
+RewriteCond %{REQUEST_URI} \.(js|css|svg|jpg|jpeg|png|gif)$
+RewriteRule ^ - [L]
+RewriteRule ^index.html http://127.0.0.1:8000/$1 [P]
+RewriteRule ^index.php http://127.0.0.1:8000/$1 [P]
+RewriteRule ^/?(.*)$ http://127.0.0.1:8000/$1 [P]     
+</IfModule>                                  

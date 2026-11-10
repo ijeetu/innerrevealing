@@ -1,0 +1,728 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+
+:root {
+  --primary-color: #5a5bb5;
+  --secondary-color: #010211;
+  --body-color: #fff;
+  --border-color: #d8e0e6;
+  --hover-color: #4D4E9B;
+  --loader-color: #5a5bb5;
+  --thirdary-color: #83b807;
+
+  /* Add shadcn/ui destructive variables for light theme */
+  /* --destructive: 222.2 84% 4.9%; */
+  /* Using Hex instead */
+  /* --destructive-foreground: 210 40% 98%; */
+  /* Using Hex instead */
+  /* Use Hex values */
+  --destructive: #ef4444;
+  /* Tailwind red-500 */
+  --destructive-foreground: #ffffff;
+  /* White */
+
+  /* Define other shadcn/ui variables for light theme if not already present */
+  --background: #ffffff;
+  /* White */
+  --foreground: #020817;
+  /* Slate 950 */
+  --card: #ffffff;
+  /* White */
+  --card-foreground: #020817;
+  /* Slate 950 */
+  --popover: #ffffff;
+  /* White */
+  --popover-foreground: #020817;
+  /* Slate 950 */
+  --primary: #0a0a0a;
+  /* Or your specific primary color e.g., #5a5bb5 */
+  --primary-foreground: #fafafa;
+  --secondary: #f1f5f9;
+  /* Slate 100 */
+  --secondary-foreground: #0f172a;
+  /* Slate 900 */
+  --muted: #f1f5f9;
+  /* Slate 100 */
+  --muted-foreground: #64748b;
+  /* Slate 500 */
+  --accent: #f1f5f9;
+  /* Slate 100 */
+  --accent-foreground: #0f172a;
+  /* Slate 900 */
+  --border: #e2e8f0;
+  /* Slate 200 */
+  --input: #e2e8f0;
+  /* Slate 200 */
+  --ring: #020817;
+  /* Slate 950 */
+
+  --radius: 0.5rem;
+
+  --sidebar: hsl(0 0% 98%);
+
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+
+  --sidebar-primary: hsl(240 5.9% 10%);
+
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+
+  --sidebar-border: hsl(220 13% 91%);
+
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+* {
+  /* margin: 0; */
+  padding: 0;
+  /* font-family: var(--font-montserrat); */
+  font-family: var(--font-geist);
+}
+
+body {
+  background: var(--body-color);
+  color: #010211;
+}
+
+@utility bodyBg {
+  background: var(--body-color);
+}
+
+@utility primaryBg {
+  background: var(--primary-color);
+}
+
+@utility primaryColor {
+  color: var(--primary-color);
+}
+
+@utility primaryLightBg {
+  background: var(--primary-light-color);
+}
+
+@utility secondaryBg {
+  background: var(--secondary-color);
+}
+
+@utility secondaryColor {
+  color: var(--secondary-color);
+}
+
+@utility secondaryTextColor {
+  color: var(--secondary-color);
+}
+
+@utility hoverBgColor {
+  background: var(--hover-color);
+}
+
+@utility hoverColor {
+  color: var(--hover-color);
+}
+
+@utility loaderBgColor {
+  background: var(--loader-color);
+}
+
+@utility loaderColor {
+  color: var(--loader-color);
+}
+
+@utility flexCenter {
+  @apply flex items-center justify-center;
+}
+
+@utility flexColCenter {
+  @apply flex items-center justify-center flex-col;
+}
+
+@utility commonMT {
+  @apply mt-[34px] md:mt-[60px] lg:mt-[90px];
+}
+
+@utility commonMB {
+  @apply mb-[34px] md:mb-[60px] lg:mb-[90px];
+}
+
+@utility primaryBorder {
+  border-color: var(--primary-color);
+}
+
+@utility primaryBottomBorder {
+  border-bottom-color: var(--primary-color);
+}
+
+@utility borderColor {
+  border-color: var(--border-color);
+}
+
+@utility sectionTitle {
+  @apply text-xl md:text-2xl lg:text-[28px] font-semibold;
+}
+
+@utility sectionPara {
+  @apply font-normal;
+}
+
+@utility commonTextGap {
+  @apply gap-2 md:gap-4;
+}
+
+@utility commonBtn {
+  @apply primaryBg text-white md:text-lg lg:text-xl rounded-[4px] py-2 px-4 hover:hoverBgColor transition-all duration-300;
+}
+
+@utility sectionBg {
+  @apply bg-[#F2F5F7];
+}
+
+@utility secondaryText {
+  @apply text-[#808080];
+}
+
+@utility commonGap {
+  @apply space-y-6 md:space-y-12;
+}
+
+@utility tertiaryColor {
+  @apply text-[var(--thirdary-color)];
+}
+
+@utility emptyStatesImg {
+  @apply h-full w-full max-w-[280px] max-h-[274px];
+}
+
+@config "../../tailwind.config";
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+
+  /* === Updated Sidebar Colors === */
+  --sidebar-background: oklch(0.112 0.032 276.6);
+  /* #010211 */
+  --sidebar-foreground: oklch(0.985 0 0);
+  /* Almost white text */
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  /* Existing primary, ensure it contrasts with new bg */
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  /* White text for primary elements */
+  --sidebar-accent: oklch(0.2 0.01 276.6);
+  /* Slightly lighter than bg for hover/accent bg */
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  /* Border color, slightly lighter than bg */
+  --sidebar-ring: oklch(0.439 0 0);
+  /* Existing ring color */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+
+
+/* RTL Support */
+.rtl {
+  direction: rtl;
+}
+
+.ltr {
+  direction: ltr;
+}
+
+/* RTL-specific styles */
+.rtl .text-left {
+  text-align: right;
+}
+
+.rtl .text-right {
+  text-align: left;
+}
+
+.rtl .ml-auto {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.rtl .mr-auto {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+.rtl .pl-4 {
+  padding-left: 0;
+  padding-right: 1rem;
+}
+
+.rtl .pr-4 {
+  padding-right: 0;
+  padding-left: 1rem;
+}
+
+.rtl .ml-4 {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+.rtl .mr-4 {
+  margin-right: 0;
+  margin-left: 1rem;
+}
+
+/* RTL flexbox adjustments */
+.rtl .flex-row {
+  flex-direction: row-reverse;
+}
+
+.rtl .space-x-4>*+* {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+.rtl .space-x-2>*+* {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* RTL border adjustments */
+.rtl .border-l {
+  border-left: none;
+  border-right: 1px solid;
+}
+
+.rtl .border-r {
+  border-right: none;
+  border-left: 1px solid;
+}
+
+
+
+.swiper-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px !important;
+  padding-bottom: 12px;
+}
+
+.swiper-pagination-bullet {
+  position: relative;
+  margin: 0 !important;
+  background: var(--secondary-color) !important;
+  opacity: 15% !important;
+  cursor: pointer;
+}
+
+.swiper-pagination-bullet-active {
+  background-color: var(--primary-color) !important;
+  opacity: 1 !important;
+}
+
+.swiper-pagination-bullet {
+  height: 10px !important;
+  width: 10px !important;
+}
+
+.swiper-pagination-fraction,
+.swiper-pagination-custom,
+.swiper-horizontal>.swiper-pagination-bullets,
+.swiper-pagination-bullets.swiper-pagination-horizontal {
+  bottom: 0px !important;
+}
+
+.border-color {
+  border-color: #000 !important;
+}
+
+.testimonialsBgDiv {
+  background-color: var(--primary-color) !important;
+}
+
+@media screen and (min-width: 768px) {
+  .testimonialSwiper .swiper-pagination-bullet {
+    background-color: #ffffff71 !important;
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .testimonialSwiper .swiper-pagination-bullet-active {
+    border: none !important;
+    width: 12px !important;
+    height: 12px !important;
+    background-color: white !important;
+  }
+
+  .testimonialSwiper .swiper-pagination-bullet::before {
+    border: none !important;
+  }
+}
+
+button {
+  cursor: pointer !important;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--primary-color);
+}
+
+.accent-primaryBg {
+  accent-color: var(--primary-color);
+}
+
+/* Custom Swiper Pagination Styles */
+/* Apply styles specifically within the ExpertsEducators section if desired,
+   or keep them global like this. Add a parent selector like `.experts-educators-section` if needed */
+.swiper-pagination-custom .swiper-pagination-bullet {
+  width: 8px;
+  /* Default size */
+  height: 8px;
+  /* Default size */
+  background-color: white !important;
+  /* White background for inactive */
+  opacity: 0.7 !important;
+  /* Slightly transparent inactive bullets */
+  border: none;
+  /* Remove default border if any */
+  transition: all 0.3s ease;
+}
+
+.swiper-pagination-custom .swiper-pagination-bullet-active {
+  background-color: transparent !important;
+  /* Transparent background for active */
+  border: 2px solid white !important;
+  /* White border for active */
+  width: 12px !important;
+  /* Slightly larger active bullet */
+  height: 12px !important;
+  /* Slightly larger active bullet */
+  opacity: 1 !important;
+  /* Fully opaque active bullet */
+}
+
+form input:focus-within,
+form input:focus-visible,
+form input:focus,
+form textarea:focus-within,
+form textarea:focus-visible,
+form textarea:focus,
+.phone-input-custom:focus,
+.phone-input-custom:focus-visible {
+  border-color: #6366f1 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+input:focus-visible,
+input:focus,
+input,
+textarea:focus-visible,
+textarea:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.customScrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 6px;
+  display: block;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+/* Track */
+.customScrollbar::-webkit-scrollbar-track {
+  border-radius: 10px;
+  /* background-color: lightgray; */
+}
+
+/* Handle */
+.customScrollbar::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 10px;
+}
+
+.instructorSidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+
+.requireField::after {
+  color: red;
+  content: "*";
+  margin-left: 4px;
+}
+
+[dir="rtl"] .requireField::after {
+  margin-left: 0;
+  margin-right: 4px;
+}
+
+
+/* In your global CSS file */
+.rich-text-content {
+  width: 100%;
+}
+
+/* Reset Tailwind's default styling for HTML elements within rich-text-content */
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3,
+.rich-text-content h4,
+.rich-text-content h5,
+.rich-text-content h6,
+.rich-text-content p,
+.rich-text-content ul,
+.rich-text-content ol,
+.rich-text-content li,
+.rich-text-content blockquote,
+.rich-text-content pre,
+.rich-text-content a {
+  all: revert;
+  /* This resets all properties to their natural values */
+}
+
+.rich-text-content a {
+  text-decoration: none;
+}
+
+/* Ensure images don't exceed container width */
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure proper spacing between elements */
+.rich-text-content>*:not(:last-child) {
+  margin-bottom: 1em;
+}
+
+.continue-learning-swiper .swiper-pagination-bullet {
+  width: 10px !important;
+  height: 10px !important;
+  background-color: var(--primary-color) !important;
+  opacity: 1 !important;
+}
+
+.continue-learning-swiper .swiper-pagination-bullet-active {
+  width: 20px !important;
+  height: 20px !important;
+  background-color: white !important;
+  border: 2px solid var(--primary-color) !important;
+}
+
+/* =====================================================
+   Hero Swiper — Pagination Dots
+   Mobile: dots visible at bottom. Desktop: dots hidden.
+   ===================================================== */
+.heroSwiper .swiper-pagination {
+  display: flex !important;
+  bottom: 8px !important;
+}
+
+/* Mobile only: show pagination */
+@media screen and (min-width: 640px) {
+  .heroSwiper .swiper-pagination {
+    display: none !important;
+  }
+
+  .instructor-swiper .swiper-pagination {
+    display: none !important;
+  }
+}
+
+.heroSwiper .swiper-pagination-bullet {
+  width: 8px !important;
+  height: 8px !important;
+  background-color: rgba(1, 2, 17, 0.35) !important;
+  opacity: 1 !important;
+  transition: all 0.3s ease !important;
+}
+
+.heroSwiper .swiper-pagination-bullet-active {
+  background-color: var(--primary-color) !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  opacity: 1 !important;
+}
+
+/* =====================================================
+   Instructor / Expert Educators Swiper — Pagination Dots
+   Mobile only (below 640px): dots visible
+   ===================================================== */
+@media screen and (max-width: 639px) {
+  .instructor-swiper .swiper-pagination {
+    display: flex !important;
+    bottom: 0px !important;
+  }
+}
+
+.instructor-swiper .swiper-pagination-bullet {
+  width: 8px !important;
+  height: 8px !important;
+  background-color: #D9D9D9 !important;
+  opacity: 1 !important;
+  transition: all 0.3s ease !important;
+}
+
+.instructor-swiper .swiper-pagination-bullet-active {
+  background-color: #FFFFFF !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 4px !important;
+  opacity: 1 !important;
+}
+
+/* =====================================================
+   react-phone-input-2 — RTL Fix
+   .rtl-phone-input wrapper is applied when isRTL=true.
+   Flag goes to the RIGHT, input text direction is right.
+   ===================================================== */
+
+/* Flip the flag dropdown to the RIGHT side */
+.rtl-phone-input .react-tel-input .flag-dropdown {
+  left: auto !important;
+  right: 0 !important;
+  border-left: 1px solid #cacaca !important;
+  border-right: none !important;
+  border-radius: 0 3px 3px 0 !important;
+}
+
+/* Move the selected flag button to the right */
+.rtl-phone-input .react-tel-input .selected-flag {
+  padding: 0 8px 0 0 !important;
+}
+
+/* Input: space on the RIGHT for the flag, text aligns right */
+.rtl-phone-input .react-tel-input .form-control {
+  padding-right: 52px !important;
+  padding-left: 8px !important;
+  text-align: right !important;
+  direction: ltr !important;
+  /* numbers still render left-to-right */
+}
+
+/* Dropdown list stays LTR (country names render correctly) */
+.rtl-phone-input .react-tel-input .country-list {
+  direction: ltr !important;
+  text-align: left !important;
+  right: 0 !important;
+  left: auto !important;
+}
+
+.rtl-phone-input .react-tel-input .selected-flag .arrow {
+  left: -20px !important;
+  /* right: 0px !important; */
+}
+
+/* React Quill RTL Support */
+[dir="rtl"] .ql-editor {
+  text-align: right;
+  direction: rtl;
+}
+
+[dir="rtl"] .ql-editor.ql-blank::before {
+  left: auto !important;
+  right: 15px !important;
+  text-align: right;
+}
+
+[dir="rtl"] .ql-toolbar {
+  direction: rtl;
+}
+
+[dir="rtl"] .ql-snow .ql-picker:not(.ql-color-picker):not(.ql-icon-picker) svg {
+  right: auto;
+  left: 0;
+}
+
+[dir="rtl"] .ql-snow .ql-picker-label {
+  padding-left: 18px;
+  padding-right: 8px;
+  text-align: right;
+}
+
+[dir="rtl"] .ql-snow .ql-picker-options {
+  text-align: right;
+}
+
+[dir="rtl"] .ql-formats {
+  margin-right: 0 !important;
+  margin-left: 15px !important;
+}
+
+.ql-editor {
+  min-height: 120px;
+}

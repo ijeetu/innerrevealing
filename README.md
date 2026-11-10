@@ -1,5 +1,7 @@
 # Inner Revealing
 
+The independent eLMS web frontend lives in [`lms/`](lms/) and is deployed at https://ir.vishwalabs.com. See [`lms/deploy/README.md`](lms/deploy/README.md) for server configuration and the pending production backend handoff. This repository root continues to contain the marketing website.
+
 A responsive website for Inner Revealing Meditation Centre, built with Next.js App Router, React, TypeScript, and GSAP. Content follows the supplied `Inner Revealing - Website Content (New Structure).docx`, with the LunaFit Figma design language: Satoshi typography, white and light-gray surfaces, dark text, and rounded cards. The primary violet-to-magenta gradient matches the supplied logo. Desktop heroes use 64px type and section headings use 55px type, with a responsive scale for smaller screens.
 
 The supplied source document, `.design-reference` research files and `output` working files are retained locally and excluded from the public repository. They are not required to run or build the website.
