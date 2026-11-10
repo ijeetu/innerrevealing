@@ -4,6 +4,8 @@ import type { WebSettings } from '@/utils/api/general/getSettings';
 import en from '../utils/locale/en.json';
 import { database } from './db';
 import { ApiError } from './errors';
+import { safeContent } from './admin/core';
+import type { LearningChapter, LessonSummary } from '@/types/learning';
 
 interface CourseRow extends RowDataPacket {
   id: number; title: string; slug: string; short_description: string; description: string | null;
@@ -22,7 +24,7 @@ function courseData(row: CourseRow): CourseDetails {
   const price = Number(row.price);
   return {
     id: Number(row.id), slug: row.slug, title: row.title, short_description: row.short_description,
-    description: row.description, image: row.image, category_id: Number(row.category_id || 0),
+    description: row.description ? safeContent(row.description, 'Course description') : null, image: row.image, category_id: Number(row.category_id || 0),
     category_name: row.category_name || '', level: row.level, course_type: price > 0 ? 'paid' : 'free',
     sequential_access: false, certificate_enabled: false, certificate_fee: null,
     ratings: 0, average_rating: 0, author_name: row.author_name, price, discount_price: price,
@@ -48,13 +50,13 @@ function courseData(row: CourseRow): CourseDetails {
 export async function getPublishedCourseBySlug(slug: string): Promise<CourseDetails | null> {
   if (!slug || slug.length > 220) return null;
   const [rows] = await database().execute<CourseRow[]>(`${COURSE_SELECT} WHERE c.status = 'published' AND c.slug = ? LIMIT 1`, [slug]);
-  return rows[0] ? courseData(rows[0]) : null;
+  return rows[0] ? attachPublicCurriculum(courseData(rows[0])) : null;
 }
 
 export async function getPublishedCourseById(id: number): Promise<CourseDetails | null> {
   if (!Number.isSafeInteger(id) || id < 1) return null;
   const [rows] = await database().execute<CourseRow[]>(`${COURSE_SELECT} WHERE c.status = 'published' AND c.id = ? LIMIT 1`, [id]);
-  return rows[0] ? courseData(rows[0]) : null;
+  return rows[0] ? attachPublicCurriculum(courseData(rows[0])) : null;
 }
 
 export function pageOptions(params: URLSearchParams): { page: number; perPage: number } {
@@ -80,7 +82,7 @@ export function paginate<T>(data: T[], total: number, page: number, perPage: num
   };
 }
 
-export async function getPublishedCourses(params: URLSearchParams) {
+export async function getPublishedCourses(params: URLSearchParams, userId?: number) {
   const { page, perPage } = pageOptions(params);
   const conditions = ["c.status = 'published'"];
   const values: (string | number)[] = [];
@@ -102,10 +104,18 @@ export async function getPublishedCourses(params: URLSearchParams) {
   if (params.get('course_type') === 'free') conditions.push('c.price = 0');
   if (params.get('course_type') === 'paid') conditions.push('c.price > 0');
   const where = `WHERE ${conditions.join(' AND ')}`;
-  const order = params.get('sort_by') === 'oldest' ? 'c.created_at ASC, c.id ASC' : 'c.created_at DESC, c.id DESC';
+  const order = (params.get('sort_by') || params.get('post_filter')) === 'oldest' ? 'c.created_at ASC, c.id ASC' : 'c.created_at DESC, c.id DESC';
   const [count] = await database().execute<RowDataPacket[]>(`SELECT COUNT(*) AS total ${COURSE_FROM} ${where}`, values);
   const [rows] = await database().execute<CourseRow[]>(`${COURSE_SELECT} ${where} ORDER BY ${order} LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`, values);
   const courses = rows.map(row => ({ ...courseData(row), author_id: Number(row.author_id), author_slug: `learner-${row.author_id}`, is_wishlisted: false, is_enrolled: false }));
+  if (userId && courses.length) {
+    const ids = courses.map(course => course.id);
+    const placeholders = ids.map(() => '?').join(',');
+    const [saved] = await database().execute<RowDataPacket[]>(`SELECT course_id FROM ir_wishlist WHERE user_id = ? AND course_id IN (${placeholders})`, [userId, ...ids]);
+    const [enrolled] = await database().execute<RowDataPacket[]>(`SELECT course_id FROM ir_enrollments WHERE user_id = ? AND status = 'active' AND course_id IN (${placeholders})`, [userId, ...ids]);
+    const savedIds = new Set(saved.map(row => Number(row.course_id))), enrolledIds = new Set(enrolled.map(row => Number(row.course_id)));
+    for (const course of courses) { course.is_wishlisted = savedIds.has(course.id); course.is_enrolled = enrolledIds.has(course.id); }
+  }
   return paginate(courses, Number(count[0].total), page, perPage, '/api/get-courses');
 }
 
@@ -148,4 +158,45 @@ export async function getCategories(params: URLSearchParams) {
 export async function publishedCourseCount(): Promise<number> {
   const [rows] = await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM ir_courses WHERE status = 'published'");
   return Number(rows[0].total);
+}
+
+
+// Public curriculum includes lesson metadata only. Content and private source URLs
+// are returned exclusively by the access-checked learning and media endpoints.
+export async function getCourseCurriculum(courseId: number): Promise<LearningChapter[]> {
+  const [chapters] = await database().execute<RowDataPacket[]>('SELECT id,title,position FROM ir_chapters WHERE course_id = ? ORDER BY position,id', [courseId]);
+  const [lessons] = await database().execute<RowDataPacket[]>(
+    'SELECT id,course_id,chapter_id,title,type,duration_seconds,position,is_preview FROM ir_lessons WHERE course_id = ? AND is_published = 1 ORDER BY position,id', [courseId],
+  );
+  return chapters.map(chapter => ({
+    id: Number(chapter.id), title: chapter.title, position: Number(chapter.position),
+    lessons: lessons.filter(lesson => Number(lesson.chapter_id) === Number(chapter.id)).map(lesson => ({
+      id: Number(lesson.id), course_id: Number(lesson.course_id), chapter_id: Number(lesson.chapter_id),
+      title: lesson.title, type: lesson.type as LessonSummary['type'], duration_seconds: Number(lesson.duration_seconds),
+      position: Number(lesson.position), is_preview: Boolean(lesson.is_preview),
+    })),
+  }));
+}
+
+async function attachPublicCurriculum(course: CourseDetails): Promise<CourseDetails> {
+  const chapters = await getCourseCurriculum(course.id);
+  const lessons = chapters.flatMap(chapter => chapter.lessons);
+  course.chapter_count = chapters.length;
+  course.lecture_count = lessons.filter(lesson => ['video', 'audio'].includes(lesson.type)).length;
+  course.total_curriculum_count = lessons.length;
+  course.total_duration = lessons.reduce((sum, lesson) => sum + lesson.duration_seconds, 0);
+  course.total_duration_formatted = course.total_duration ? `${Math.ceil(course.total_duration / 60)} min` : '';
+  course.chapters = chapters.map(chapter => ({
+    id: chapter.id, course_id: course.id, title: chapter.title, slug: String(chapter.id), description: '', is_active: true,
+    chapter_order: chapter.position, lecture_count: chapter.lessons.length, lectures_count: chapter.lessons.length,
+    duration: chapter.lessons.reduce((sum, lesson) => sum + lesson.duration_seconds, 0), duration_formatted: '',
+    total_content: chapter.lessons.length, quizzes_count: 0, assignments_count: 0,
+    documents_count: chapter.lessons.filter(lesson => ['pdf', 'text'].includes(lesson.type)).length,
+    curriculum: chapter.lessons.map(lesson => ({
+      id: lesson.id, type: ['pdf', 'text'].includes(lesson.type) ? 'document' as const : 'lecture' as const,
+      title: lesson.title, slug: String(lesson.id), description: null, is_active: true, chapter_order: lesson.position,
+      is_completed: false, created_at: '', updated_at: '', free_preview: lesson.is_preview ? 1 : 0,
+    })), created_at: '', updated_at: '', locked: !chapter.lessons.some(lesson => lesson.is_preview),
+  }));
+  return course;
 }

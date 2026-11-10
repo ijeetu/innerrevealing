@@ -11,9 +11,9 @@ export function assertSameOrigin(request: Request): void {
   if (supplied !== expected) throw new ApiError(403, 'This request must come from this website.');
 }
 
-export async function readJson(request: Request): Promise<Record<string, unknown>> {
+export async function readJson(request: Request, maxBytes = 16384): Promise<Record<string, unknown>> {
   if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) throw new ApiError(415, 'Send an application/json request.');
-  if (Number(request.headers.get('content-length') || 0) > 16384) throw new ApiError(413, 'Request is too large.');
+  if (Number(request.headers.get('content-length') || 0) > maxBytes) throw new ApiError(413, 'Request is too large.');
   const reader = request.body?.getReader();
   if (!reader) throw new ApiError(400, 'Send a valid JSON object.');
   const chunks: Uint8Array[] = [];
@@ -23,7 +23,7 @@ export async function readJson(request: Request): Promise<Record<string, unknown
       const { done, value } = await reader.read();
       if (done) break;
       length += value.byteLength;
-      if (length > 16384) {
+      if (length > maxBytes) {
         await reader.cancel();
         throw new ApiError(413, 'Request is too large.');
       }

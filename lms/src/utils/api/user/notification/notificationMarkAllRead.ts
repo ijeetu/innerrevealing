@@ -17,15 +17,7 @@ export type MarkAllReadResponse = ApiResponse<MarkAllReadResponseData>;
 export const MarkAllNotificationsAsRead = async (
 ): Promise<MarkAllReadResponse | null> => {
     try {
-        // Create FormData object for the POST request
-        const formData = new FormData();
-
-        // No parameters needed for this endpoint, but we use FormData for consistency
-        // with other API calls in the same pattern
-
-        // Send the POST request to the backend API with FormData
-        // Using the correct endpoint from the API documentation
-        const response = await axiosClient.post<MarkAllReadResponse>(notificationsMarkAllReadApiRoute, formData);
+        const response = await axiosClient.post<MarkAllReadResponse>(notificationsMarkAllReadApiRoute, {});
 
         // Always return the response data, even if error: true
         // This allows the component to handle API errors properly

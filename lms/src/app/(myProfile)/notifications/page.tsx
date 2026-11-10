@@ -1,10 +1,2 @@
-import Notifications from '@/components/profile/tabsPagesContent/Notifications'
-import React from 'react'
-
-const Page = () => {
-  return (
-    <Notifications />
-  )
-}
-
-export default Page
+import NotificationsPanel from '@/components/learning/NotificationsPanel';
+export default function NotificationsPage() { return <NotificationsPanel />; }

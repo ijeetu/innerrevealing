@@ -58,6 +58,8 @@ export default function ContactUs() {
     message: "",
   });
 
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [errors, setErrors] = useState<FormErrors>({});
   const [preparedMessage, setPreparedMessage] = useState<string | null>(null);
   const enquiryReview = useRef<HTMLDivElement>(null);
@@ -97,10 +99,17 @@ export default function ContactUs() {
     }
   };
 
-  const handleSubmitContact = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitContact = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!validateForm()) return;
-    setPreparedMessage(`Hello Inner Revealing,\n\nMy name is ${formData.firstName.trim()}.\nEmail: ${formData.email.trim()}\n\n${formData.message.trim()}`);
+    if (submitting || !validateForm()) return;
+    setSubmitting(true); setSubmitError('');
+    try {
+      const response = await fetch('/api/contact', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: formData.firstName.trim(), email: formData.email.trim(), message: formData.message.trim(), subject: 'Website enquiry' }) });
+      const result = await response.json();
+      if (!response.ok || result.error) throw new Error(result.message || 'Your enquiry could not be saved. Please try again.');
+      setPreparedMessage(`Hello Inner Revealing,\n\nMy name is ${formData.firstName.trim()}.\nEmail: ${formData.email.trim()}\n\n${formData.message.trim()}`);
+    } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Please try again.'); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -182,14 +191,14 @@ export default function ContactUs() {
               {t("send_us_a_message")}
             </h2>
             <p className="text-gray-600">
-              Share your question with us. Prepare your enquiry, then choose WhatsApp or email to send it directly to our team.
+              Share your question with the Inner Revealing team. You can also contact us directly by WhatsApp or email.
             </p>
           </div>
 
           {preparedMessage ? (
             <div ref={enquiryReview} tabIndex={-1} role='status' className='space-y-5 rounded-3xl border borderColor sectionBg p-6 md:p-8'>
-              <h3 className='text-2xl font-semibold'>Your enquiry is ready.</h3>
-              <p className='text-gray-600'>Review your message and choose how to send it. Your enquiry will be sent when you complete the action in WhatsApp or your email app.</p>
+              <h3 className='text-2xl font-semibold'>Your enquiry has been received.</h3>
+              <p className='text-gray-600'>Our team can review your message in the centre’s inbox. You can also follow up using WhatsApp or email below.</p>
               <div className='whitespace-pre-wrap rounded-2xl bg-white p-5 text-sm text-gray-700'>{preparedMessage}</div>
               <div className='flex flex-wrap gap-3'>
                 <Link href={`https://wa.me/919836147999?text=${encodeURIComponent(preparedMessage)}`} target='_blank' rel='noopener noreferrer' className='commonBtn'>Send on WhatsApp</Link>
@@ -258,12 +267,14 @@ export default function ContactUs() {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="commonBtn w-full md:w-max"
+                disabled={submitting}
+                className="commonBtn w-full md:w-max disabled:opacity-50"
               >
-                Prepare enquiry
+                {submitting ? 'Sending…' : 'Send enquiry'}
               </button>
             </div>
-            <p className='text-sm text-gray-500'>You can review your message before sending it by WhatsApp or email.</p>
+            {submitError && <p role='alert' className='text-sm text-red-700'>{submitError}</p>}
+            <p className='text-sm text-gray-500'>Your name, email and message will be shared with the Inner Revealing team.</p>
           </form>}
         </div>
       </div>

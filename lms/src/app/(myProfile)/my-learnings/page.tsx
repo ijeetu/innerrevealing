@@ -1,10 +1,2 @@
-import MyLearningsPage from '@/components/profile/tabsPagesContent/MyLearnings'
-import React from 'react'
-
-const Page = () => {
-  return (
-    <MyLearningsPage />
-  )
-}
-
-export default Page
+import LearnerLibrary from '@/components/learning/LearnerLibrary';
+export default function MyLearningPage() { return <LearnerLibrary />; }

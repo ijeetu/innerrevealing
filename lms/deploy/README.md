@@ -45,3 +45,14 @@ systemctl is-enabled innerrevealing-lms
 ```
 
 Check the homepage and `/courses` in a browser, including browser network requests. TLS certificate renewal is managed by CloudPanel.
+
+## Admin, integrations and private media
+
+- Admin login: `https://ir.vishwalabs.com/admin/login`
+- Owner account: provision explicitly with `npm run admin:bootstrap`; never commit bootstrap passwords.
+- `APP_ENCRYPTION_KEY`: stable 32-byte secret, stored only in the protected server `.env`. Back it up securely; changing it makes stored integration credentials unreadable until re-entered.
+- `UPLOAD_DIR=/home/innerrevealing/shared/uploads`: durable media storage outside release directories and the public web root. The application user owns it; lesson files require enrolment or administrator permission.
+- SMTP and Razorpay credentials are configured by the superadmin in the panel, encrypted in MySQL and omitted from read responses. Their connection tests perform no payment and send no test email.
+- Razorpay webhook: `https://ir.vishwalabs.com/api/commerce/webhook/razorpay`; use the panel's separate webhook secret and captured-payment events.
+
+Back up MySQL and private uploads before migrations. Build and test in a separate release directory. Keep `.well-known` available for CloudPanel certificate renewal. Run fixture-driven authoring/payment tests only against the isolated test database; the live catalogue must contain only actual centre courses.

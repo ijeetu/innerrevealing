@@ -1,7 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import CourseDetailsPage from "@/components/pagesComponent/courseDetails/CourseDetailsPage";
+import CourseOverview from "@/components/learning/CourseOverview";
 import { getPublishedCourseBySlug } from "@/server/catalogue";
 
 export const dynamic = 'force-dynamic';
@@ -26,5 +26,5 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const course = await fetchCourse(slug);
   if (!course) notFound();
-  return <CourseDetailsPage slug={slug} courseData={course} />;
+  return <CourseOverview course={course} />;
 }

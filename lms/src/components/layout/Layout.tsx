@@ -58,7 +58,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     document.documentElement.style.setProperty('--hover-color', settings.data.hover_color || '#450092');
     const favicon = document.querySelector<HTMLLinkElement>('link[rel="icon"]') || document.createElement('link');
     favicon.rel = 'icon';
-    favicon.href = '/inner-revealing-logo.png';
+    favicon.href = settings.data.favicon || '/inner-revealing-logo.png';
     if (!favicon.isConnected) document.head.appendChild(favicon);
   }, [settings]);
 

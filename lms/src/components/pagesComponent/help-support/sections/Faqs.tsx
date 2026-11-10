@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import { extractErrorMessage } from '@/utils/helpers';
 import FaqsSkeleton from '@/components/skeletons/FaqsSkeleton';
 import { useTranslation } from '@/hooks/useTranslation'
+import RichTextContent from '@/components/commonComp/RichText';
 
 const Faqs = () => {
 
@@ -125,7 +126,7 @@ const Faqs = () => {
                       className="p-4 text-base border-none font-medium break-words"
                     >
 
-                      {item.answer}
+                      <RichTextContent content={item.answer} />
                     </AccordionContent>
 
                   </AccordionItem>

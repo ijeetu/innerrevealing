@@ -130,6 +130,7 @@ const CourseContent: React.FC<CourseContentProps> = ({ cateSlug, searchPage, sea
 
             if (search) params.search = search;
             if (cateSlug) params.category_slug = cateSlug;
+            else if (activeFilters.category) params.category_slug = activeFilters.category;
             if (activeFilters.price) params.course_type = activeFilters.price;
             if (activeFilters.level) params.level = activeFilters.level;
             if (activeFilters.rating) params.rating_filter = activeFilters.rating;

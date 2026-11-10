@@ -16,6 +16,7 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { isLoginModalOpenSelector } from "@/redux/reducers/helpersReducer";
 import { currentLanguageSelector } from "@/redux/reducers/languageSlice";
 import { PiUserBold } from "react-icons/pi";
+import { ShoppingBag } from "lucide-react";
 
 const Header: React.FC = () => {
   const pathname = usePathname();
@@ -77,6 +78,7 @@ const Header: React.FC = () => {
             </div>
 
             <div className="hidden md:flex items-center gap-4 shrink-0">
+              <Link href="/cart" className="p-2" aria-label="Your cart"><ShoppingBag size={21} /></Link>
               <LanguageModal />
               <span className="ir-lms-header-divider" aria-hidden="true" />
               {isLogin ? <ProfileDropdown /> : (
@@ -92,6 +94,7 @@ const Header: React.FC = () => {
             </div>
 
             <div className="md:hidden flexCenter gap-1 shrink-0">
+              <Link href="/cart" className="p-2" aria-label="Your cart"><ShoppingBag size={21} /></Link>
               {isLogin && (
                 <Link href={`/edit-profile?lang=${currentLanguageCode}`} className="hidden min-[400px]:flex p-1" aria-label="Your profile">
                   <PiUserBold size={22} className="secondaryColor" />

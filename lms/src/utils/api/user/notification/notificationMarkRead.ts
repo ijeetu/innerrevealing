@@ -20,25 +20,7 @@ export const markNotificationsAsRead = async (
     notificationIds: string | string[]
 ): Promise<NotificationMarkReadResponse | null> => {
     try {
-        // Create FormData for the backend API
-        const formData = new FormData();
-
-        // Handle both single notification ID and array of notification IDs
-        if (Array.isArray(notificationIds)) {
-            // Multiple notification IDs - append each as an array element
-            notificationIds.forEach((id, index) => {
-                formData.append(`notification_id[${index}]`, id);
-            });
-        } else {
-            // Single notification ID
-            formData.append("notification_id", notificationIds);
-        }
-
-        // Send the form data to the backend API
-        const response = await axiosClient.post<NotificationMarkReadResponse>(
-            notificationsMarkReadApiRoute,
-            formData
-        );
+        const response = await axiosClient.post<NotificationMarkReadResponse>(notificationsMarkReadApiRoute, { notification_id: notificationIds });
 
         // Always return the response data, even if error: true
         // This allows the component to handle API errors properly

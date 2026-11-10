@@ -9,6 +9,7 @@ import { setToken, setUserData, setUserLastFetch } from "@/redux/reducers/userSl
 import { setIsLoginModalOpen } from "@/redux/reducers/helpersReducer";
 import { loginLocalAccount, registerLocalAccount } from "@/utils/localAuth";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 interface SignInModalProps {
   isOpen: boolean;
@@ -86,6 +87,7 @@ export default function SignInModal({ isOpen, onOpenChange, setIsRegisterOptionM
             {isRegister ? "Create your account and make space for your wellbeing." : "Sign in to continue your learning journey."}
           </DialogDescription>
         </div>
+        {!isRegister && <Link href="/forgot-password" onClick={close} className="primaryColor text-sm">Forgot your password?</Link>}
         <form onSubmit={submit} className="space-y-4">
           {isRegister && <div className="space-y-2">
             <label htmlFor="local-auth-name" className="text-sm font-medium">Your name</label>

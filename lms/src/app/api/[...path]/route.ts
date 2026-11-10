@@ -8,6 +8,11 @@ import {
   getPublishedCourses, getSystemLanguages, pageOptions, paginate, publishedCourseCount,
 } from '@/server/catalogue';
 import { RowDataPacket } from 'mysql2/promise';
+import { getLibrary, getWishlist } from '@/server/learning';
+import { safeContent } from '@/server/admin/core';
+import { getNotifications, markRead } from '@/server/notifications';
+import { positiveId } from '@/server/learning';
+import { readJson } from '@/server/request';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,16 +32,24 @@ export async function GET(request: Request, context: Context) {
     if (path === 'system-languages') return success(await getSystemLanguages(params.get('code') || undefined));
     if (path === 'get-course-languages') return success(await getCourseLanguages());
     if (['categories', 'get-categories', 'categories-tree'].includes(path)) return success(await getCategories(params));
-    if (path === 'get-courses') return success(await getPublishedCourses(params));
+    if (path === 'get-courses') return success(await getPublishedCourses(params, (await getSessionUser(request))?.id));
     if (['get-course', 'get-course-details'].includes(path)) {
       const course = params.get('slug') ? await getPublishedCourseBySlug(params.get('slug')!) : await getPublishedCourseById(Number(params.get('id')));
       if (!course) throw new ApiError(404, 'This practice is not available.');
+      const user = await getSessionUser(request);
+      if (user) {
+        const [membership] = await database().execute<RowDataPacket[]>("SELECT id FROM ir_enrollments WHERE user_id=? AND course_id=? AND status='active'", [user.id, course.id]);
+        course.is_purchased = membership.length > 0;
+        const [wishlist] = await database().execute<RowDataPacket[]>('SELECT course_id FROM ir_wishlist WHERE user_id=? AND course_id=?', [user.id, course.id]);
+        course.is_wishlist = wishlist.length > 0;
+      }
       return success(course);
     }
     if (path === 'get-user-details') return success(await authenticated(request));
     if (path === 'get-counts') {
       const [instructors] = await database().execute<RowDataPacket[]>("SELECT COUNT(DISTINCT instructor_id) AS total FROM ir_courses WHERE status = 'published'");
-      return success({ course_count: await publishedCourseCount(), instructor_count: Number(instructors[0].total), student_enroll_count: 0, positive_feedback_count: 0 });
+      const [enrolled] = await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM ir_enrollments e JOIN ir_courses c ON c.id=e.course_id WHERE e.status='active' AND c.status='published'");
+      return success({ course_count: await publishedCourseCount(), instructor_count: Number(instructors[0].total), student_enroll_count: Number(enrolled[0].total), positive_feedback_count: 0 });
     }
     if (path === 'get-search-suggestions') {
       const query = params.get('query') || '';
@@ -48,16 +61,26 @@ export async function GET(request: Request, context: Context) {
       });
     }
     if (['get-feature-sections', 'get-sliders', 'seo-settings', 'get-seo-settings', 'get-custom-form-fields', 'get-resources'].includes(path)) return success([]);
-    if (path === 'pages') throw new ApiError(404, 'This page has not been published yet. Please contact Inner Revealing for details.');
+    if (path === 'pages') {
+      const [rows] = await database().execute<RowDataPacket[]>("SELECT id,slug,title,content FROM ir_pages WHERE status='published' ORDER BY id");
+      return success(rows.filter(row => !params.get('type') || row.slug === params.get('type')).map(row => ({ ...row, page_type: row.slug, page_content: row.content, meta_title: row.title })));
+    }
     if (path === 'faqs') {
       const { page, perPage } = pageOptions(params);
-      return success(paginate([], 0, page, perPage, '/api/faqs'));
+      const [rows] = await database().execute<RowDataPacket[]>('SELECT id,question,answer,created_at,updated_at FROM ir_faqs WHERE is_published=1 ORDER BY position,id');
+      return success(paginate(rows.slice((page-1)*perPage,page*perPage).map(row => ({ ...row, answer: safeContent(row.answer, 'FAQ answer', 50000) })), rows.length, page, perPage, '/api/faqs'));
     }
     if (path === 'get-instructors') {
       const { page, perPage } = pageOptions(params);
       return success(paginate([], 0, page, perPage, '/api/get-instructors'));
     }
-    if (['my-learning', 'wishlist', 'notifications', 'orders', 'refund/my-refunds'].includes(path)) {
+    if (path === 'my-learning' || path === 'wishlist') {
+      const { page, perPage } = pageOptions(params);
+      const rows = path === 'my-learning' ? (await getLibrary(request)).map(item => ({ ...item.course, progress_percentage: item.progress_percent, completed_curriculum_count: item.completed_lessons, total_curriculum_count: item.total_lessons, is_enrolled: true })) : await getWishlist(request);
+      return success(paginate(rows.slice((page-1)*perPage,page*perPage), rows.length, page, perPage, `/api/${path}`));
+    }
+    if (path === 'notifications') return success(await getNotifications((await authenticated(request)).id, params));
+    if (['refund/my-refunds'].includes(path)) {
       await authenticated(request);
       const { page, perPage } = pageOptions(params);
       return success({ ...paginate([], 0, page, perPage, `/api/${path}`), unread_count: 0 });
@@ -71,6 +94,18 @@ async function unsupportedMutation(request: Request, context: Context) {
   try {
     assertSameOrigin(request);
     const path = (await context.params).path.join('/');
+    if (request.method === 'POST' && ['notifications/mark-read', 'notifications/mark-all-read'].includes(path)) {
+      const user = await authenticated(request);
+      const body = await readJson(request);
+      if (path === 'notifications/mark-all-read') return success(await markRead(user.id), 'Your updates have been marked as read.');
+      const supplied = body.notification_id ?? body.id;
+      const ids = Array.isArray(supplied) ? supplied : [supplied];
+      if (!ids.length || ids.length > 100) throw new ApiError(422, 'Choose between 1 and 100 updates.');
+      const validated = ids.map(positiveId);
+      let updated = 0;
+      for (const id of validated) updated += (await markRead(user.id, id)).updated;
+      return success({ updated });
+    }
     if (path.startsWith('instructor/') || ['create-course', 'update-course', 'delete-course', 'update-course-status'].includes(path)) throw new ApiError(403, 'Course administration is not enabled for learner accounts.');
     throw new ApiError(503, 'This feature is not available yet. No changes were made.');
   } catch (error) { return failure(error); }

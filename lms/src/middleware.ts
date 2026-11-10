@@ -1,41 +1,19 @@
-import { NextResponse, NextRequest } from 'next/server'
+import { NextResponse, NextRequest } from 'next/server';
 
-/**
- * Middleware to handle authentication for private routes
- */
 export function middleware(request: NextRequest) {
-  // Instructor and management screens are unavailable until owner tools exist.
-  if (/^\/(?:instructor(?:\/|$)|create-course(?:\/|$)|become-instructor(?:\/|$)|my-teams(?:\/|$))/.test(request.nextUrl.pathname)) {
-    return NextResponse.redirect(new URL('/courses', request.url))
+  const path = request.nextUrl.pathname;
+  if (/^\/(?:instructor|create-course|become-instructor|my-teams)(?:\/|$)/.test(path)) {
+    return NextResponse.redirect(new URL('/admin', request.url));
   }
-
-  const session = request.cookies.get('ir_session')?.value
-
-  if (!session) {
-    return NextResponse.redirect(new URL('/', request.url))
+  if (path === '/my-wallet' || path === '/billing-details') return NextResponse.redirect(new URL('/transaction-history', request.url));
+  if (path === '/admin/login') return NextResponse.next();
+  if (!request.cookies.get('ir_session')?.value) {
+    return NextResponse.redirect(new URL(path.startsWith('/admin') ? '/admin/login' : '/', request.url));
   }
-
-  // Create the response object
-  const response = NextResponse.next()
-
-  // Every protected API validates the opaque session against MySQL.
-  return response
+  // All sensitive data and actions re-check the MySQL session and role server-side.
+  const response = NextResponse.next();
+  response.headers.set('Cache-Control', 'private, no-store');
+  if (path.startsWith('/admin')) response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  return response;
 }
-
-// Apply middleware ONLY to private routes
-export const config = {
-  matcher: [
-    '/instructor/:path*',
-    '/create-course',
-    '/edit-profile',
-    '/account-security',
-    '/my-learnings',
-    '/my-wishlist',
-    '/notifications',
-    '/transaction-history',
-    '/delete-account',
-    '/my-wallet',
-    '/become-instructor/:path*',
-    '/my-teams/:path*',
-  ],
-}
+export const config = { matcher: ['/admin/:path*', '/instructor/:path*', '/create-course', '/become-instructor/:path*', '/my-teams/:path*', '/edit-profile', '/account-security', '/my-learnings', '/my-wishlist', '/notifications', '/transaction-history', '/delete-account', '/my-wallet', '/billing-details'] };

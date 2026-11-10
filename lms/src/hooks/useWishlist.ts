@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
-import { addToWishlist } from '@/utils/api/user/wishlist/addWishlist';
+import { webRequest } from '@/utils/webApi';
 import { isLoginSelector } from '@/redux/reducers/userSlice';
 import { setIsLoginModalOpen } from '@/redux/reducers/helpersReducer';
 import { useTranslation } from './useTranslation';
@@ -40,31 +40,11 @@ export const useWishlist = () => {
     try {
       setIsLoading(true);
 
-      // Determine status: "1" to add, "0" to remove
-      const status = isCurrentlyInWishlist ? 0 : 1;
-
-      // Call the wishlist API with params
-      const response = await addToWishlist({
-        course_id: courseId,
-        status: status,
-      });
-
-      // Handle response - check if it's null (network error) or has error
-      if (!response) {
-        toast.error('Network error. Please try again.');
-        return false;
-      }
-
-      // Check if API returned an error
-      if (response.error) {
-        const action = isCurrentlyInWishlist ? 'remove from' : 'add to';
-        toast.error(response.message || response.error || `Failed to ${action} wishlist`);
-        return false;
-      }
+      await webRequest(`/api/learning/wishlist/${Number(courseId)}`, { method: 'POST', body: { saved: !isCurrentlyInWishlist } });
 
       // Success - show success message
       const action = isCurrentlyInWishlist ? 'removed from' : 'added to';
-      toast.success(response.message || `Course ${action} wishlist`);
+      toast.success(`Course ${action} wishlist`);
       return true;
 
     } catch (error) {

@@ -8,22 +8,25 @@ import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from './passwords';
 import { assertSameOrigin, clientAddress, normalizeEmail, readJson, validateName, validatePassword } from './request';
 import { rateLimit } from './rate-limit';
 import { failure, success } from './response';
+import { removeUserData } from './user-lifecycle';
 
 export const SESSION_COOKIE = 'ir_session';
 const SESSION_SECONDS = 7 * 24 * 60 * 60;
+
+export type UserRole = 'student' | 'admin' | 'superadmin';
 
 interface UserRow extends RowDataPacket {
   id: number;
   name: string;
   email: string;
   password_hash: string;
-  role: 'student' | 'admin';
+  role: UserRole;
   is_active: number;
   created_at: string;
   updated_at: string;
 }
 
-export type SessionUser = UserDetails & { role: 'student' | 'admin'; token: 'web-session' };
+export type SessionUser = UserDetails & { role: UserRole; token: 'web-session' };
 
 function dateString(value: string): string {
   return new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`).toISOString();
@@ -166,7 +169,7 @@ async function deleteAccount(request: Request, body: Record<string, unknown>): P
     const [rows] = await connection.execute<UserRow[]>('SELECT * FROM ir_users WHERE id = ? FOR UPDATE', [current.id]);
     if (!rows[0] || !(await verifyPassword(body.password, rows[0].password_hash))) throw new ApiError(401, 'Password is incorrect.');
     if (rows[0].role !== 'student') throw new ApiError(403, 'Contact the site administrator to delete this account.');
-    await connection.execute('DELETE FROM ir_users WHERE id = ?', [current.id]);
+    await removeUserData(connection, Number(current.id));
     await connection.commit();
     return withSession(success(null, 'Account deleted.'), null);
   } catch (error) { await connection.rollback(); throw error; }
