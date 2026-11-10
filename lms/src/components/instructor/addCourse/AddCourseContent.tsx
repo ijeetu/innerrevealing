@@ -216,6 +216,12 @@ const CourseContent = ({ editCourse }: { editCourse?: boolean }) => {
                     });
                 }
 
+                // Empty lists must be explicit so saving a cleared field removes its saved values.
+                if (!courseDetailsData.courseTag?.some(tag => tag)) formData.append('course_tags', '[]');
+                if (!courseDetailsData.whatYoullLearn?.some(learning => learning.title)) formData.append('learnings_data', '[]');
+                if (!courseDetailsData.requirements?.some(requirement => requirement.requirement)) formData.append('requirements_data', '[]');
+                if (!courseDetailsData.instructor?.length) formData.append('instructors', '[]');
+
                 if (courseDetailsData.status) {
                     formData.append(`status`, courseDetailsData.status);
                 }
@@ -374,6 +380,12 @@ const CourseContent = ({ editCourse }: { editCourse?: boolean }) => {
                 });
             }
 
+            // Empty lists must be explicit so saving a cleared field removes its saved values.
+            if (!courseDetailsData.courseTag?.some(tag => tag)) formData.append('course_tags', '[]');
+            if (!courseDetailsData.whatYoullLearn?.some(learning => learning.title)) formData.append('learnings_data', '[]');
+            if (!courseDetailsData.requirements?.some(requirement => requirement.requirement)) formData.append('requirements_data', '[]');
+            if (!courseDetailsData.instructor?.length) formData.append('instructors', '[]');
+
             if (courseDetailsData.status !== "publish") {
                 formData.append(`status`, courseDetailsData.status);
             }
@@ -489,7 +501,7 @@ const CourseContent = ({ editCourse }: { editCourse?: boolean }) => {
                             categoryId: courseDetails?.category?.id.toString(),
                             difficultyLevel: courseDetails?.level,
                             languageId: courseDetails?.language?.id.toString(),
-                            courseTag: courseDetails?.tags.map((tag: { id: number; name: string }) => tag.name),
+                            courseTag: courseDetails?.tags?.map((tag: { id: number; name: string }) => String(tag.id)) || [],
                             whatYoullLearn: courseDetails?.learnings,
                             requirements: courseDetails?.requirements,
                             instructor: courseDetails?.co_instructors?.map((instructor: Record<string, string | number>) => Number(instructor.id)) || [],

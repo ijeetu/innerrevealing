@@ -21,6 +21,7 @@ import {
   LuBell,
   LuChevronDown,
   LuChevronUp,
+  LuSettings,
 } from "react-icons/lu";
 import { LucideClipboardEdit } from "lucide-react"; // Keep this if it was intentionally different
 import Link from "next/link";
@@ -33,6 +34,7 @@ import { settingsSelector } from "@/redux/reducers/settingsSlice";
 import { UserDetails } from "@/utils/api/user/getUserDetails";
 import { invitorsSelector } from "@/redux/reducers/invitorsSlice";
 import { PiCircleBold } from "react-icons/pi";
+import { staffRole } from "./Layout/staffAccess";
 
 const InstructorSidebar = () => {
 
@@ -52,6 +54,7 @@ const InstructorSidebar = () => {
 
   const [isClient, setIsClient] = useState<boolean>(false);
 
+  const localStaffRole = staffRole(userData);
   const instructorType = userData?.instructor_details?.type;
 
   const isTeam = instructorType === "team";
@@ -100,7 +103,7 @@ const InstructorSidebar = () => {
       type: "link",
     },
     // Only show team member menu item if user is a team instructor
-    ...(userData?.instructor_details?.type === 'team' ? [{
+    ...(localStaffRole || userData?.instructor_details?.type === 'team' ? [{
       icon: LuUsers,
       label: t("team_member"),
       href: "/instructor/team-member",
@@ -162,6 +165,12 @@ const InstructorSidebar = () => {
       href: "/instructor/notifications",
       type: "link",
     },
+    ...(localStaffRole ? [{
+      icon: LuSettings,
+      label: "Centre administration",
+      href: "/admin",
+      type: "link",
+    }] : []),
   ];
 
   useEffect(() => {
@@ -173,20 +182,14 @@ const InstructorSidebar = () => {
         isClient &&
         <Sidebar side={side} className="w-64 flex-shrink-0 border-r dark:border-sidebar-border text-white">
       {/* logo section */}
-      <div className="flex items-center justify-center p-4 bg-[#010211]">
-        <Link href={"/instructor/dashboard"} onClick={handleLinkClick}>
-          <div className="w-[112px] max-h-[48px] sm:w-[200px] sm:max-h-[64px] md:max-h-[80px] h-auto" >
-            <CustomImageTag
-              src={logo}
-              alt={'logo'}
-              className="w-full h-[60px] object-contain"
-            />
-          </div>
+      <div className="ir-instructor-brand-area">
+        <Link href="/instructor/dashboard" onClick={handleLinkClick} className="ir-instructor-brand-link" aria-label="Inner Revealing LMS dashboard">
+          <img src={logo || '/inner-revealing-logo.png'} alt="Inner Revealing Meditation Centre" width={1774} height={887} className="ir-instructor-logo" loading="eager" />
         </Link>
       </div>
 
       {/* User Profile Section - Can be part of SidebarHeader or a SidebarGroup */}
-      <div className="flex flex-col items-center space-y-2 pb-2 px-4 !bg-[#010211] text-white">
+      <div className="ir-instructor-sidebar-profile flex flex-col items-center space-y-2 pb-2 px-4 text-white">
         <div className="w-full opacity-40 mb-4 bg-[#d9d9d9] h-[1px]" />
 
         <Avatar className="h-12 w-12">
@@ -208,14 +211,14 @@ const InstructorSidebar = () => {
         </h2>
 
         <p className="text-sm mt-[-8px] text-gray-400 dark:text-sidebar-accent-foreground">
-          {isTeam ? t("team_instructor") : t("instructor")}
+          {localStaffRole === "superadmin" ? "Superadmin" : localStaffRole === "admin" ? "Administrator" : isTeam ? t("team_instructor") : t("instructor")}
         </p>
 
         <div className="w-full bg-[#d9d9d9] h-[1px] opacity-40 mt-4" />
       </div>
 
 
-      <SidebarContent className="flex-1 overflow-y-auto p-4 !pt-0 space-y-5 !bg-[#010211] text-white customScrollbar instructorSidebar">
+      <SidebarContent className="ir-instructor-sidebar-nav flex-1 overflow-y-auto p-4 !pt-0 space-y-5 text-white customScrollbar instructorSidebar">
         {/* Navigation Group */}
         <SidebarGroup className="p-0">
           <SidebarMenu>
@@ -225,7 +228,7 @@ const InstructorSidebar = () => {
                   <Link
                     href={item.href || "#"}
                     onClick={handleLinkClick}
-                    className={`flex items-center space-x-3 px-3 py-2 my-1 rounded-lg transition-colors ${pathname === item.href
+                    className={`flex items-center space-x-3 px-3 py-2 my-1 rounded-lg transition-colors ${(pathname === item.href || (item.href === "/instructor/my-course" && pathname.startsWith("/instructor/my-course/")))
                       ? "bg-white text-black"
                       : "text-white hover:bg-white hover:text-black"
                       }`}
@@ -256,14 +259,14 @@ const InstructorSidebar = () => {
                           {item.label}
                         </span>
                       </div>
-                      {expandedItems[item.label] ? (
+                      {(expandedItems[item.label] ?? item.subItems?.some((subItem) => pathname === subItem.href)) ? (
                         <LuChevronUp className="h-4 w-4 text-white" />
                       ) : (
                         <LuChevronDown className="h-4 w-4 text-white" />
                       )}
                     </button>
 
-                    {expandedItems[item.label] && item.subItems && (
+                    {(expandedItems[item.label] ?? item.subItems?.some((subItem) => pathname === subItem.href)) && item.subItems && (
                       <div className="ml-8 space-y-1">
                         {item.subItems.map((subItem) => (
                           <Link

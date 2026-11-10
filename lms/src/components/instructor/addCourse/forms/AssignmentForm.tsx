@@ -40,10 +40,10 @@ const assignmentFormSchema = z.object({
     .optional()
     .refine((file) => {
       if (!file || !(file instanceof File)) return true; // Optional — skip validation if not provided
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 50 * 1024 * 1024; // 10MB
       return file.size <= maxSize;
     }, {
-      message: "File size must be less than 10MB"
+      message: "File size must be less than 50MB"
     })
     .refine((file) => {
       if (!file || !(file instanceof File)) return true; // Optional — skip validation if not provided
@@ -239,6 +239,7 @@ export default function AssignmentForm({ setActiveTab }: { setActiveTab: (tab: T
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (file && file.size > 50 * 1024 * 1024) { toast.error('Please choose an assignment file of 50 MB or smaller.'); e.target.value = ''; return; }
     if (file) {
       setSelectedFile(file);
     }
@@ -259,6 +260,7 @@ export default function AssignmentForm({ setActiveTab }: { setActiveTab: (tab: T
     e.preventDefault();
     e.stopPropagation();
     const file = e.dataTransfer.files?.[0];
+    if (file && file.size > 50 * 1024 * 1024) { toast.error('Please choose an assignment file of 50 MB or smaller.'); return; }
     if (file) {
       setSelectedFile(file);
       dispatch(setAssignmentData({ assignment_media: file }));

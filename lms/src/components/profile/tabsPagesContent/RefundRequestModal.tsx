@@ -19,7 +19,7 @@ import { useDispatch } from "react-redux";
 import { setShouldRefetchOrders } from "@/redux/reducers/helpersReducer";
 
 
-export default function RefundRequestModal({ open, setOpen, selectedCourse }: { open: boolean, setOpen: (open: boolean) => void, selectedCourse: OrderCourse | null }) {
+export default function RefundRequestModal({ open, setOpen, selectedCourse, orderId, onSuccess }: { open: boolean, setOpen: (open: boolean) => void, selectedCourse: OrderCourse | null, orderId?:number, onSuccess?:()=>void }) {
 
     const [file, setFile] = useState<File | null>(null);
     const [reason, setReason] = useState<string>("");
@@ -78,6 +78,7 @@ export default function RefundRequestModal({ open, setOpen, selectedCourse }: { 
         try {
             const response = await createRefundRequest({
                 course_id: selectedCourse?.course_id || "",
+                order_id:orderId,
                 reason: reason,
                 user_media: file || undefined,
             });
@@ -88,6 +89,7 @@ export default function RefundRequestModal({ open, setOpen, selectedCourse }: { 
                 } else {
                     toast.success(response.message || "Refund request created successfully");
                     dispatch(setShouldRefetchOrders(true));
+                    onSuccess?.();
                     setOpen(false);
                     setFile(null);
                     setReason("");

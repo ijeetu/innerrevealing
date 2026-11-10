@@ -1,205 +1,101 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import InstructorSidebar from "@/components/instructor/InstructorSidebar";
-import DashboardHeader from "@/components/instructor/DashboardHeader";
-import DashboardFooter from "@/components/instructor/DashboardFooter";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import toast from "react-hot-toast";
-import { useDispatch, useSelector } from "react-redux";
-import { isNewMemberAddedSelector, setTeamMemberData, teamMemberDataSelector, teamMemberLimit, teamMemberPage, IsLoadMoreTeamMembers, updateTotalTeamMembers } from "@/redux/instructorReducers/teamMemberSlice";
-import { userDataSelector } from "@/redux/reducers/userSlice";
-import { extractErrorMessage } from "@/utils/helpers";
-import { getTeamMembers, TeamMemberDataType } from "@/utils/api/instructor/team-member/getTeamMembers";
-import { usePathname, useRouter } from "next/navigation";
-import { UserDetails } from "@/utils/api/user/getUserDetails";
-import { useTranslation } from "@/hooks/useTranslation";
-import { setSettings, setSettingsLastFetch, settingsSelector } from "@/redux/reducers/settingsSlice";
-import { currentLanguageSelector, isRTLSelector } from "@/redux/reducers/languageSlice";
-import { getInvitors } from "@/utils/api/instructor/team-member/getInvitor";
-import { setInvitorsData } from "@/redux/reducers/invitorsSlice";
-import checkInstructorMode from "@/components/hoc/checkInstructorMode";
-import { getSettings, WebSettings } from "@/utils/api/general/getSettings";
+import { useEffect, useState, type ReactNode } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
+import InstructorSidebar from '@/components/instructor/InstructorSidebar';
+import DashboardHeader from '@/components/instructor/DashboardHeader';
+import DashboardFooter from '@/components/instructor/DashboardFooter';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { isRTLSelector } from '@/redux/reducers/languageSlice';
+import { setToken, setUserData } from '@/redux/reducers/userSlice';
+import { setSettings, setSettingsLastFetch } from '@/redux/reducers/settingsSlice';
+import { getSettings } from '@/utils/api/general/getSettings';
+import { getTeamMembers, type TeamMemberDataType } from '@/utils/api/instructor/team-member/getTeamMembers';
+import { getInvitors } from '@/utils/api/instructor/team-member/getInvitor';
+import { isNewMemberAddedSelector, IsLoadMoreTeamMembers, setTeamMemberData, teamMemberDataSelector, teamMemberLimit, teamMemberPage, updateTotalTeamMembers } from '@/redux/instructorReducers/teamMemberSlice';
+import { setInvitorsData } from '@/redux/reducers/invitorsSlice';
+import type { UserDetails } from '@/utils/api/user/getUserDetails';
+import { staffRole } from './staffAccess';
+import './instructor.css';
 
-function Layout({ children }: { children: React.ReactNode }) {
-
-  const { t } = useTranslation();
+export default function Layout({ children }: { children: ReactNode }) {
   const dispatch = useDispatch();
-
-  const settings = useSelector(settingsSelector);
-  const userData = useSelector(userDataSelector) as UserDetails;
-  const isNewMemberAdded = useSelector(isNewMemberAddedSelector);
-  const currentLangCode = useSelector(currentLanguageSelector);
-  const isRTL = useSelector(isRTLSelector);
   const router = useRouter();
+  const isRTL = useSelector(isRTLSelector);
+  const memberPage = useSelector(teamMemberPage);
+  const memberLimit = useSelector(teamMemberLimit);
+  const newMemberAdded = useSelector(isNewMemberAddedSelector);
+  const appendMembers = useSelector(IsLoadMoreTeamMembers);
+  const members = useSelector(teamMemberDataSelector) as TeamMemberDataType[];
+  const [access, setAccess] = useState<'checking' | 'allowed' | 'denied'>('checking');
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
-  const pathname = usePathname();
-
-  // Get pagination state from Redux
-  const teamMemberLimitValue = useSelector(teamMemberLimit);
-  const teamMemberPageValue = useSelector(teamMemberPage);
-  const isLoadMoreTeamMembers = useSelector(IsLoadMoreTeamMembers);
-  const teamMembersData = useSelector(teamMemberDataSelector) as TeamMemberDataType[];
-
-  const fetchTeamMembers = async () => {
-    try {
-      // Use the new getTeamMembers utility function with pagination
-      const response = await getTeamMembers({
-        page: teamMemberPageValue,
-        per_page: teamMemberLimitValue,
-      });
-
-      if (response) {
-        // Check if API returned an error (error: true in response)
-        if (!response.error) {
-          // Handle successful response - extract team members data
-          if (response.data?.data) {
-            // Update total team members count
-            dispatch(updateTotalTeamMembers({ data: response.data.total || 0 }));
-
-            // Handle load more vs initial load
-            if (!isLoadMoreTeamMembers) {
-              // Initial load or refresh - replace data
-              dispatch(setTeamMemberData(response.data.data));
-            } else {
-              // Load more - append data
-              dispatch(setTeamMemberData([...teamMembersData, ...response.data.data]));
-            }
-          } else {
-            console.log('No team members data found in response');
-            dispatch(setTeamMemberData([]));
-          }
-        } else {
-          // Handle API error case (like "No Team Members Found")
-          if (response.message !== "No team members found") {
-            console.log("API error in team members:", response.message);
-            toast.error(response.message || "Failed to fetch team members");
-            if (response.message === "Your instructor account has been suspended. Please contact support.") {
-              router.push('/');
-            }
-          }
-          dispatch(setTeamMemberData([]));
+  useEffect(() => {
+    const controller = new AbortController();
+    setAccess('checking');
+    setError('');
+    const restoreStaffSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
+        const result = await response.json();
+        if (controller.signal.aborted) return;
+        const account = result.data?.user as UserDetails | undefined;
+        if (!response.ok || !staffRole(account)) {
+          setAccess('denied');
+          router.replace('/admin/login');
+          return;
         }
-      } else {
-        console.log("response is null in component", response);
-        dispatch(setTeamMemberData([]));
-      }
-    } catch (error) {
-      console.error('Error fetching team members:', error);
-      extractErrorMessage(error);
-      dispatch(setTeamMemberData([]));
-    }
-  };
-
-  useEffect(() => {
-    fetchTeamMembers();
-  }, [isNewMemberAdded, teamMemberPageValue]);
-
-  // fetch invitor instructors data
-  const fetchInvitorInstructors = async () => {
-    try {
-      const response = await getInvitors();
-      if (response) {
-        if (!response.error) {
-          if (response.data) {
-            dispatch(setInvitorsData(response.data));
-          } else {
-            dispatch(setInvitorsData([]));
-          }
-        } else {
-          console.log("API error:", response.message);
-          toast.error(response.message || "Failed to fetch feature sections");
+        dispatch(setToken('web-session'));
+        dispatch(setUserData(account!));
+        setAccess('allowed');
+        const settings = await getSettings();
+        if (!controller.signal.aborted && settings && !settings.error && settings.data) {
+          dispatch(setSettings(settings.data));
+          dispatch(setSettingsLastFetch(Date.now()));
         }
-      } else {
-        console.log("response is null in component", response);
+      } catch {
+        if (!controller.signal.aborted) setError('We could not check your staff session. Please try again.');
       }
-    } catch (error) {
-      extractErrorMessage(error);
-    }
-  }
+    };
+    void restoreStaffSession();
+    return () => controller.abort();
+  }, [attempt, dispatch, router]);
 
   useEffect(() => {
-    fetchInvitorInstructors();
-    fetchSettingsData();
-  }, []);
-
-  const fetchSettingsData = async () => {
-    try {
-      // setIsLoading(true);
-      const response = await getSettings();
-
-      if (response) {
-        // Check if API returned an error (error: true in response)
-        if (!response.error) {
-          if (response.data) {
-            const data: WebSettings = response.data;
-            dispatch(setSettings(data));
-            dispatch(setSettingsLastFetch(Date.now()));
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem('lastFetch_Settings', Date.now().toString())
-            }
-          } else {
-            console.warn('No settings data found in response');
-          }
-        } else {
-          console.log("API error:", response.message);
-          toast.error(response.message || "Failed to fetch settings");
-        }
-      } else {
-        console.log("response is null in component", response);
-        toast.error("Failed to fetch settings");
-      }
-    } catch (error) {
-      extractErrorMessage(error);
-      toast.error("An unexpected error occurred while fetching settings");
-    }
-  }
-
+    if (access !== 'allowed') return;
+    let disposed = false;
+    getTeamMembers({ page: memberPage, per_page: memberLimit }).then((response) => {
+      if (disposed || !response || response.error) return;
+      const rows = response.data?.data || [];
+      const next = appendMembers ? [...members, ...rows].filter((member, index, all) => all.findIndex((item) => item.id === member.id) === index) : rows;
+      dispatch(setTeamMemberData(next));
+      dispatch(updateTotalTeamMembers({ data: response.data?.total || 0 }));
+    });
+    return () => { disposed = true; };
+  }, [access, memberPage, memberLimit, newMemberAdded, dispatch]);
 
   useEffect(() => {
-    if ((!userData?.is_instructor && userData?.instructor_process_status === 'pending') || userData?.instructor_process_status !== 'approved') {
-      router.push('/');
-      toast.error(t('not_authorized'));
-      return;
-    }
-    if (userData?.instructor_details?.type === 'team' && pathname.startsWith('my-teams')) {
-      router.push('/instructor/dashboard');
-      toast.error(t('not_authorized'));
-    }
-  }, [pathname])
+    if (access !== 'allowed') return;
+    let disposed = false;
+    getInvitors().then((response) => {
+      if (!disposed && response && !response.error) dispatch(setInvitorsData(response.data || []));
+    });
+    return () => { disposed = true; };
+  }, [access, newMemberAdded, dispatch]);
 
-  useEffect(() => {
-    // Preserve existing search parameters (like ?from=revenue-table)
-    const currentParams = new URLSearchParams(window.location.search);
+  if (access !== 'allowed') return <div className="ir-instructor-access" role="status">
+    {error ? <><p role="alert">{error}</p><button type="button" className="commonBtn" onClick={() => setAttempt((value) => value + 1)}>Try again</button></> : <p>Opening your LMS dashboard…</p>}
+  </div>;
 
-    // Check if lang is already correct to avoid unnecessary replaces
-    const existingLang = currentParams.get('lang');
-    if (existingLang !== String(currentLangCode)) {
-      currentParams.set('lang', String(currentLangCode));
-      const newSearch = currentParams.toString();
-      router.replace(`${pathname}${newSearch ? `?${newSearch}` : ""}`, { scroll: false });
-    }
-  }, [pathname, currentLangCode, router]);
-
-  return (
-    <SidebarProvider>
-      <div className={`flex min-h-screen w-full ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-        {/* Sidebar */}
-        <InstructorSidebar />
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-w-0 w-full">
-          {/* Header */}
-          <DashboardHeader />
-
-          {/* Page Content */}
-          <main className="flex-1 sectionBg px-4 md:px-6 py-4">{children}</main>
-
-          {/* Footer */}
-          <DashboardFooter />
-        </div>
+  return <SidebarProvider>
+    <div className={`ir-instructor-panel flex min-h-screen w-full ${isRTL ? 'rtl' : 'ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <InstructorSidebar />
+      <div className="flex-1 flex flex-col min-w-0 w-full">
+        <DashboardHeader />
+        <main className="flex-1 sectionBg px-4 md:px-6 py-4">{children}</main>
+        <DashboardFooter />
       </div>
-    </SidebarProvider>
-  );
+    </div>
+  </SidebarProvider>;
 }
-
-export default checkInstructorMode(Layout);

@@ -1,6 +1,7 @@
 'use client';
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store';
+import englishTranslations from '@/utils/locale/en.json';
 import { LanguageItem } from '@/utils/api/language/getLanguages';
 
 // Simple language state interface
@@ -29,11 +30,11 @@ const getInitialState = (): LanguageState => {
     }
     return {
         languages: [],
-        currentLanguage: null,
-        currentTranslations: {},
+        currentLanguage: "en",
+        currentTranslations: englishTranslations,
         isRTL: false,
         lastFetch: null,
-        currentLanguageCode: null,
+        currentLanguageCode: "en",
     };
 };
 

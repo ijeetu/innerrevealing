@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import { SidebarTrigger } from "@/components/ui/sidebar"; // Import SidebarTrigger
-import LanguageModal from "../modals/LanguageModal";
 import NotificationDropdown from "@/components/dropdowns/NotificationDropdown";
 import { useSelector } from "react-redux";
 import { isLoginSelector, userDataSelector } from "@/redux/reducers/userSlice";
@@ -12,7 +11,7 @@ const DashboardHeader = () => {
   const userData = useSelector(userDataSelector) as User;
   const isLogin = useSelector(isLoginSelector);
   return (
-    <header className="bg-white shadow-sm p-3 sm:p-6 flex items-center justify-between flex-wrap gap-y-4 sm:gap-0">
+    <header className="ir-instructor-header bg-white shadow-sm p-3 sm:p-6 flex items-center justify-between flex-wrap gap-y-4 sm:gap-0">
       {/* Left side: Hamburger (SidebarTrigger) and Title */}
       <div className="flex items-center">
         <SidebarTrigger className="bg-[#F8F8F9] w-10 h-10 rounded-[4px] border borderColor">
@@ -32,8 +31,6 @@ const DashboardHeader = () => {
         )}
         {/* </Button> */}
 
-        {/* Language Selector - Basic Placeholder */}
-        <LanguageModal />
 
         <div className="border borderColor h-12 max-[385px]:ml-1 ml-3"></div>
 

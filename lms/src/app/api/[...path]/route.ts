@@ -1,4 +1,8 @@
 import { database } from '@/server/db';
+import { handleCourses } from '@/server/instructor/courses';
+import { handleDashboard } from '@/server/instructor/dashboard';
+import { handleEducation } from '@/server/instructor/education';
+import { handleOperations } from '@/server/instructor/operations';
 import { getSessionUser } from '@/server/auth';
 import { ApiError } from '@/server/errors';
 import { assertSameOrigin } from '@/server/request';
@@ -27,6 +31,7 @@ async function authenticated(request: Request) {
 export async function GET(request: Request, context: Context) {
   try {
     const path = (await context.params).path.join('/');
+    for (const handler of [handleCourses, handleDashboard, handleEducation, handleOperations]) { const handled = await handler(request, path); if (handled) return handled; }
     const params = new URL(request.url).searchParams;
     if (path === 'web-settings') return success(await getPublicSettings());
     if (path === 'system-languages') return success(await getSystemLanguages(params.get('code') || undefined));
@@ -49,7 +54,8 @@ export async function GET(request: Request, context: Context) {
     if (path === 'get-counts') {
       const [instructors] = await database().execute<RowDataPacket[]>("SELECT COUNT(DISTINCT instructor_id) AS total FROM ir_courses WHERE status = 'published'");
       const [enrolled] = await database().execute<RowDataPacket[]>("SELECT COUNT(*) AS total FROM ir_enrollments e JOIN ir_courses c ON c.id=e.course_id WHERE e.status='active' AND c.status='published'");
-      return success({ course_count: await publishedCourseCount(), instructor_count: Number(instructors[0].total), student_enroll_count: Number(enrolled[0].total), positive_feedback_count: 0 });
+      const [positive] = await database().execute<RowDataPacket[]>("SELECT COUNT(*) total FROM ir_reviews r JOIN ir_courses c ON c.id=r.course_id WHERE c.status='published' AND r.rating>=4");
+      return success({ course_count: await publishedCourseCount(), instructor_count: Number(instructors[0].total), student_enroll_count: Number(enrolled[0].total), positive_feedback_count: Number(positive[0].total) });
     }
     if (path === 'get-search-suggestions') {
       const query = params.get('query') || '';
@@ -72,7 +78,8 @@ export async function GET(request: Request, context: Context) {
     }
     if (path === 'get-instructors') {
       const { page, perPage } = pageOptions(params);
-      return success(paginate([], 0, page, perPage, '/api/get-instructors'));
+      const [people] = await database().execute<RowDataPacket[]>("SELECT u.id,u.name,COUNT(c.id) courses_count FROM ir_users u JOIN ir_courses c ON c.instructor_id=u.id AND c.status='published' WHERE u.is_active=1 GROUP BY u.id,u.name ORDER BY u.name");
+      return success(paginate(people.slice((page-1)*perPage,page*perPage).map(row=>({...row,slug:`learner-${row.id}`,profile:'',instructor_type:'individual'})), people.length, page, perPage, '/api/get-instructors'));
     }
     if (path === 'my-learning' || path === 'wishlist') {
       const { page, perPage } = pageOptions(params);
@@ -80,11 +87,6 @@ export async function GET(request: Request, context: Context) {
       return success(paginate(rows.slice((page-1)*perPage,page*perPage), rows.length, page, perPage, `/api/${path}`));
     }
     if (path === 'notifications') return success(await getNotifications((await authenticated(request)).id, params));
-    if (['refund/my-refunds'].includes(path)) {
-      await authenticated(request);
-      const { page, perPage } = pageOptions(params);
-      return success({ ...paginate([], 0, page, perPage, `/api/${path}`), unread_count: 0 });
-    }
     if (path.startsWith('instructor/') || path.startsWith('finance/')) throw new ApiError(403, 'Instructor and payment administration is not enabled.');
     throw new ApiError(503, 'This feature is not available yet. Please contact Inner Revealing for assistance.');
   } catch (error) { return failure(error); }
@@ -94,6 +96,7 @@ async function unsupportedMutation(request: Request, context: Context) {
   try {
     assertSameOrigin(request);
     const path = (await context.params).path.join('/');
+    for (const handler of [handleCourses, handleDashboard, handleEducation, handleOperations]) { const handled = await handler(request, path); if (handled) return handled; }
     if (request.method === 'POST' && ['notifications/mark-read', 'notifications/mark-all-read'].includes(path)) {
       const user = await authenticated(request);
       const body = await readJson(request);

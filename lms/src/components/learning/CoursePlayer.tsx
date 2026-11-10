@@ -8,6 +8,7 @@ import Layout from '@/components/layout/Layout';
 import RichTextContent from '@/components/commonComp/RichText';
 import { webRequest } from '@/utils/webApi';
 import type { CourseOverviewData, LessonData } from '@/types/learning';
+import AssessmentLesson from './AssessmentLesson';
 
 function embedUrl(source: string): string | null {
   try {
@@ -78,6 +79,12 @@ export default function CoursePlayer({ slug }: { slug: string }) {
   };
   const allLessons = overview?.chapters.flatMap(chapter => chapter.lessons) || [];
   const next = allLessons[allLessons.findIndex(item => item.id === lesson?.id) + 1];
+  const canOpen=(item:typeof allLessons[number])=>{
+    if(overview?.can_manage||item.is_preview)return true;
+    if(!overview?.enrolled)return false;
+    if(!overview.sequential_access)return true;
+    return allLessons.slice(0,allLessons.findIndex(lesson=>lesson.id===item.id)).every(lesson=>overview.completed_lesson_ids.includes(lesson.id));
+  };
   const embedded = lesson?.source_url ? embedUrl(lesson.source_url) : null;
   return <Layout><main className="container py-8 md:py-12 space-y-6">
     <div className="flex flex-wrap justify-between gap-4"><Link className="primaryColor" href={`/course-details/${slug}`}>← Course overview</Link><Link className="primaryColor" href="/my-learnings">My learning</Link></div>
@@ -91,13 +98,16 @@ export default function CoursePlayer({ slug }: { slug: string }) {
           {lesson.type === 'video' && (embedded ? <iframe className="aspect-video w-full rounded-xl bg-black" src={embedded} title={lesson.title} allow="fullscreen; picture-in-picture" allowFullScreen /> : lesson.source_url ? <video key={lesson.id} controls playsInline controlsList="nodownload" className="aspect-video w-full rounded-xl bg-black" src={lesson.source_url} onTimeUpdate={recordPosition} onLoadedMetadata={event => { event.currentTarget.currentTime = lesson.position_seconds; }} /> : <p>The video has not been added yet.</p>)}
           {lesson.type === 'audio' && (lesson.source_url ? <audio key={lesson.id} controls className="w-full" src={lesson.source_url} onTimeUpdate={recordPosition} onLoadedMetadata={event => { event.currentTarget.currentTime = lesson.position_seconds; }} /> : <p>The audio has not been added yet.</p>)}
           {lesson.type === 'pdf' && (lesson.source_url ? <div className="space-y-3"><iframe src={lesson.source_url} title={lesson.title} className="w-full h-[70vh] border rounded-xl" /><a className="primaryColor underline" href={lesson.source_url} target="_blank" rel="noopener noreferrer">Open document in a new tab</a></div> : <p>The document has not been added yet.</p>)}
-          <div className="flex flex-wrap gap-3 pt-3">{lesson.enrolled && <button className="commonBtn disabled:opacity-50" disabled={busy} onClick={markComplete}>{busy ? 'Saving…' : lesson.completed ? 'Completed ✓ · Mark incomplete' : 'Mark lesson complete'}</button>}{next && (overview?.enrolled || overview?.can_manage || next.is_preview) && <Link className="rounded-full border borderColor px-6 py-3" href={`/learn/${slug}?lesson=${next.id}`}>Next lesson →</Link>}</div>
+          {lesson.type==='resource'&&<div className='space-y-4'>{lesson.content&&<RichTextContent content={lesson.content}/>} {lesson.source_url?<a className='commonBtn inline-flex' href={lesson.source_url} target='_blank' rel='noopener noreferrer'>Open or download {lesson.title}</a>:<p>The resource file has not been added yet.</p>}</div>}
+          {['quiz','assignment'].includes(lesson.type)&&<AssessmentLesson key={lesson.id} lesson={lesson} onCompleted={()=>{setLesson(previous=>previous?{...previous,completed:true}:previous);setOverview(previous=>previous?{...previous,completed_lesson_ids:[...new Set([...previous.completed_lesson_ids,lesson.id])]}:previous);}} onNext={()=>{if(next&&canOpen(next))router.push(`/learn/${slug}?lesson=${next.id}`);else router.push('/my-learnings');}}/>}
+          {!!lesson.resources?.length&&<section className='space-y-3 border-t borderColor pt-5'><h3 className='font-semibold'>Lesson resources</h3>{lesson.resources.map(resource=><a key={resource.id} className='block primaryColor underline' href={resource.source_url} target='_blank' rel='noopener noreferrer'>{resource.title}</a>)}</section>}
+          <div className="flex flex-wrap gap-3 pt-3">{lesson.enrolled && !['quiz','assignment'].includes(lesson.type) && <button className="commonBtn disabled:opacity-50" disabled={busy} onClick={markComplete}>{busy ? 'Saving…' : lesson.completed ? 'Completed ✓ · Mark incomplete' : 'Mark lesson complete'}</button>}{next && canOpen(next) && <Link className="rounded-full border borderColor px-6 py-3" href={`/learn/${slug}?lesson=${next.id}`}>Next lesson →</Link>}</div>
           {!lesson.enrolled && <Link className="commonBtn inline-flex" href={`/course-details/${slug}`}>Join the full course</Link>}
         </>}
       </section>
       <aside className="border borderColor rounded-3xl bg-white p-5 space-y-5">
         {overview?.enrolled && <p className="text-sm primaryColor">{overview.completed_lesson_ids.length} of {allLessons.length} lessons complete</p>}
-        {overview?.chapters.map(chapter => <div key={chapter.id} className="space-y-3"><h3 className="font-semibold">{chapter.title}</h3><ul className="space-y-2">{chapter.lessons.map(item => <li key={item.id}>{overview.enrolled || overview.can_manage || item.is_preview ? <Link className={`block rounded-xl p-3 text-sm ${selected === item.id ? 'primaryLightBg primaryColor font-semibold' : 'hover:bg-gray-50'}`} href={`/learn/${slug}?lesson=${item.id}`}>{overview.completed_lesson_ids.includes(item.id) ? '✓ ' : ''}{item.title}<span className="block text-xs text-gray-500 capitalize mt-1">{item.type}{item.is_preview ? ' · Preview' : ''}</span></Link> : <span className="block p-3 text-sm text-gray-500">{item.title} · Locked</span>}</li>)}</ul></div>)}
+        {overview?.chapters.map(chapter => <div key={chapter.id} className="space-y-3"><h3 className="font-semibold">{chapter.title}</h3><ul className="space-y-2">{chapter.lessons.map(item => <li key={item.id}>{canOpen(item) ? <Link className={`block rounded-xl p-3 text-sm ${selected === item.id ? 'primaryLightBg primaryColor font-semibold' : 'hover:bg-gray-50'}`} href={`/learn/${slug}?lesson=${item.id}`}>{overview.completed_lesson_ids.includes(item.id) ? '✓ ' : ''}{item.title}<span className="block text-xs text-gray-500 capitalize mt-1">{item.type}{item.is_preview ? ' · Preview' : ''}</span></Link> : <span className="block p-3 text-sm text-gray-500">{item.title} · Locked{overview.enrolled?' · Complete earlier lessons':''}</span>}</li>)}</ul></div>)}
       </aside>
     </div>
   </main></Layout>;

@@ -25,7 +25,7 @@ const MostSellingCourses: React.FC<{ isEarningPage?: boolean }> = ({ isEarningPa
 
   // Local state for courses data
   const [courses, setCourses] = useState<MostSellingCourseDataType[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Pagination and filter state
   const [currentPage, setCurrentPage] = useState(1);
@@ -217,7 +217,7 @@ const MostSellingCourses: React.FC<{ isEarningPage?: boolean }> = ({ isEarningPa
                       </h4>
                       <div className="flex items-center gap-2">
                         <div className="">
-                          {course.price === null || course.price === '0' ? (
+                          {Number(course.price || 0) === 0 ? (
                             <span className="text-sm font-medium text-green-600 ">{t("free")}</span>
                           ) : (
                             <div className="flex items-center gap-1">

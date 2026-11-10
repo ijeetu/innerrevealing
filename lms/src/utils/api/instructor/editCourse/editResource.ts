@@ -66,18 +66,7 @@ export const updateResource = async (
 ): Promise<ApiResponse<ResourceUpdateSubmissionResponse>> => {
   try {
 
-    // Get endpoint from environment variables
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API URL for resource update
     const apiUrl = courseChaptersCurriculumResourceUpdateApiRoute;
@@ -87,6 +76,8 @@ export const updateResource = async (
 
     // Add _method: PUT for Laravel method override
     apiFormData.append('_method', 'PUT');
+    const curriculumId = formData.get('document_type_id');
+    if (curriculumId) apiFormData.append('id', curriculumId.toString());
 
     // Map all the resource update form fields - basic resource fields
     const basicFields = [

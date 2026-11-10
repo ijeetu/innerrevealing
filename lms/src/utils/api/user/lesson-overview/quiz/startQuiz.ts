@@ -4,6 +4,7 @@ import { quizStartApiRoute } from "@/utils/apiRoutes";
 
 // Interface for start quiz response data
 export interface StartQuizResponseData {
+  questions?: Array<{id:number;question:string;points:string;options:Array<{id:number;option:string;order:number;is_active:boolean}>}>;
   user_id: number;
   course_chapter_quiz_id: string;
   total_time: number;

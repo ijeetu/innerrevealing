@@ -1,7 +1,7 @@
 "use client";
 import { logoutLocalSession } from "@/utils/localAuth";
 import { setCartData } from "@/redux/reducers/cartSlice";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   Sheet,
   SheetContent,
@@ -17,7 +17,6 @@ import { AlignLeft } from "lucide-react";
 import { FaAngleRight, FaRegUser } from "react-icons/fa6";
 import BrandLogo from "./BrandLogo";
 import ProfileSheet from "@/components/responsiveComponents/ProfileSheet";
-import { FaAngleDown, FaAngleUp, FaCheck } from "react-icons/fa";
 import { logoutSuccess } from '@/redux/reducers/userSlice';
 import { logoutSuccess as logoutSuccessCoupon } from "@/redux/reducers/couponSlice";
 import { useRouter } from "next/navigation";
@@ -34,9 +33,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useTranslation } from '@/hooks/useTranslation';
 import { resetTeamMemberData } from "@/redux/instructorReducers/teamMemberSlice";
-import { currentLanguageSelector, setCurrentLanguageCode, languagesSelector, setCurrentTranslations, setCurrentLanguage, setIsRTL, setLanguageLastFetch } from "@/redux/reducers/languageSlice";
-import { getLanguage } from "@/utils/api/language/getLanguages";
-import { extractErrorMessage } from "@/utils/helpers";
+import { currentLanguageSelector } from "@/redux/reducers/languageSlice";
 import { clearBillingDetails } from "@/redux/reducers/billingDeatilsSlice";
 import { isRTLSelector } from '@/redux/reducers/languageSlice';
 
@@ -54,16 +51,11 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
 
 
   // Redux selectors - now using simplified selectors
-  const languages = useSelector(languagesSelector);
   const currentLanguage = useSelector(currentLanguageSelector);
 
   const currentLanguageCode = currentLanguage;
 
   const pathname = usePathname();
-  // Local state for loading
-  const [isLoadingLanguage, setIsLoadingLanguage] = useState(false);
-
-  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
 
 
   const navigate = useRouter()
@@ -73,17 +65,6 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
   const [logoutConfrm, setLogoutConfrm] = useState<boolean>(false)
 
   const isRTL = useSelector(isRTLSelector);
-
-  const calculateDropdownHeight = (
-    itemCount: number,
-    itemHeight: number = 40,
-    padding: number = 24,
-    headerHeight: number = 40
-  ): number => {
-    const totalHeight = headerHeight + (itemCount * itemHeight) + padding;
-
-    return totalHeight;
-  };
 
   const handleSignOut = async () => {
     try {
@@ -109,49 +90,6 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
       console.log('Oops errors!', error)
     }
   }
-
-
-  // Handle language change - following simplified pattern
-  const handleLanguageChange = async (languageCode: string) => {
-    if (languageCode !== currentLanguage) {
-      setIsLoadingLanguage(true);
-
-      try {
-        // Fetch specific language translations
-        const response = await getLanguage({
-          system_type: "web",
-          code: languageCode // Pass specific language code
-        });
-        if (response && !response.error) {
-          const languageData = response.data?.languages?.[0];
-
-          if (languageData && languageData.code === languageCode) {
-            // Update Redux state with new language data
-            dispatch(setCurrentLanguage(languageCode));
-            dispatch(setCurrentLanguageCode(languageCode));
-            dispatch(setCurrentTranslations(languageData.translations_web));
-            dispatch(setIsRTL(languageData.is_rtl));
-            dispatch(setLanguageLastFetch(Date.now()));
-            document.cookie = `lang=${languageCode};path=/;max-age=31536000`;
-          } else {
-            toast.error('Language not found in response');
-          }
-        } else {
-          toast.error(response?.error || 'Failed to fetch language');
-        }
-      } catch (error) {
-        extractErrorMessage(error);
-        console.error('❌ Failed to change language:', error);
-      } finally {
-        setIsLoadingLanguage(false);
-        // Close modal
-        setIsOpen(false);
-      }
-    }
-  };
-
-  // Calculate heights for both dropdowns
-  const languageDropdownHeight = calculateDropdownHeight(languages.length, 40, 24, 40);
 
 
   return (
@@ -217,46 +155,6 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
                   </Link>
                 </SheetClose>
               )}
-              {/* language dropdown */}
-              <div
-                className={`border-b borderColor pb-3 cursor-pointer w-full space-y-6 transition-all duration-500 overflow-hidden`}
-                style={{
-                  height: isLangDropdownOpen ? `${languageDropdownHeight}px` : "40px",
-                }}
-              >
-                <div
-                  className={`flex items-center justify-between w-full transition-all duration-300 hover:primaryColor px-2`}
-                  onClick={() => setIsLangDropdownOpen(!isLangDropdownOpen)}
-                >
-                  <span>{t("english_us")}</span>
-                  <span className="flexCenter primaryBg text-white rounded-full w-[26px] h-[26px] ">
-                    {
-                      isLangDropdownOpen ?
-                        <FaAngleUp />
-                        :
-                        <FaAngleDown />
-                    }
-                  </span>
-                </div>
-                <div className="flex flex-col gap-3 pl-4">
-                  {languages.map((language) => (
-                    <div
-                      className={`flex items-center justify-between w-full transition-all duration-300 hover:primaryColor px-2 ${language.code === currentLanguage ? "primaryColor" : ""}`}
-                      key={language.code}
-                      onClick={() => !isLoadingLanguage && handleLanguageChange(language.code)}
-                    >
-                      <span>{language.name}</span>
-                      {
-                        language.code === currentLanguage &&
-                        <span className="flexCenter primaryBg text-white rounded-full w-[20px] h-[20px] p-1">
-                          <FaCheck />
-                        </span>
-                      }
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* logout */}
               {
                 isLogin &&

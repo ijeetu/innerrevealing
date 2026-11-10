@@ -11,6 +11,7 @@ import {
 } from "@/redux/reducers/userSlice";
 import { type AdminUser, errorMessage } from "@/components/admin/api";
 import { Notice } from "@/components/admin/ui";
+import { staffLoginDestination } from "@/components/instructor/Layout/staffAccess";
 export default function AdminLoginPage() {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -28,7 +29,7 @@ export default function AdminLoginPage() {
       .then((response) => response.json())
       .then((result) => {
         if (["admin", "superadmin"].includes(result.data?.user?.role))
-          router.replace("/admin");
+          router.replace(staffLoginDestination(new URLSearchParams(window.location.search).get("next")));
       })
       .catch(() => {});
     return () => controller.abort();
@@ -51,7 +52,7 @@ export default function AdminLoginPage() {
       dispatch(setToken("web-session"));
       dispatch(setUserData(result.data.user));
       setPassword("");
-      router.replace("/admin");
+      router.replace(staffLoginDestination(new URLSearchParams(window.location.search).get("next")));
     } catch (failure) {
       setError(errorMessage(failure));
     } finally {

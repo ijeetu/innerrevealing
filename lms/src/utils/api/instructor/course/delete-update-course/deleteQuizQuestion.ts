@@ -40,19 +40,7 @@ export const deleteQuizQuestion = async (
       };
     }
 
-    // Get API URL from environment variables
-    const baseURL = process.env.NEXT_PUBLIC_API_URL;
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!baseURL || !endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_API_URL or NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_API_URL or NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API URL for delete quiz question
     const apiUrl = courseChaptersCurriculumQuizDeleteQuestionApiRoute;

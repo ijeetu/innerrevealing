@@ -118,7 +118,7 @@ export default function CurriculumTab({ teamSlug }: CurriculumTabProps) {
     setCurriculumList(items);
 
     // Extract the IDs in the new order
-    const curriculumIds = items.map(item => item.id);
+    const curriculumIds = items.map(item => item.lesson_id ?? item.all_details.lesson_id ?? item.id);
 
     // Get the current chapter ID from curriculum data
     if (chapterId) {
@@ -505,7 +505,7 @@ export default function CurriculumTab({ teamSlug }: CurriculumTabProps) {
                 resource_title: curriculumDetails.title,
                 resource_short_description: curriculumDetails.description || '',
                 resource_file: curriculumDetails.file,
-                resource_duration: Number(curriculumDetails.duration) || 0,
+                resource_duration: curriculumDetails.duration_seconds !== undefined ? Number(curriculumDetails.duration_seconds) : Number(curriculumDetails.hours || 0) * 3600 + Number(curriculumDetails.minutes || 0) * 60 + Number(curriculumDetails.seconds || 0),
                 resource_url: curriculumDetails.url || '',
               }));
             }
@@ -683,8 +683,8 @@ export default function CurriculumTab({ teamSlug }: CurriculumTabProps) {
                                     ) :
                                       curriculumList?.map((item, index) => (
                                         <Draggable
-                                          key={item.id}
-                                          draggableId={item.id.toString()}
+                                          key={item.lesson_id ?? `${item.type}-${item.id}`}
+                                          draggableId={`lesson-${item.lesson_id ?? `${item.type}-${item.id}`}`}
                                           index={index}
                                         >
                                           {(provided, snapshot) => (

@@ -50,7 +50,7 @@ export default function AdminOverview() {
         title={`A thoughtful space, ${user?.name?.split(" ")[0] || "welcome"}.`}
         description="A clear view of your courses, learners, and the things that need your attention."
         actions={
-          <Link className="adm-btn" href="/admin/courses/new">
+          <Link className="adm-btn" href="/instructor/my-course/add-course">
             Create a course
           </Link>
         }
@@ -71,13 +71,13 @@ export default function AdminOverview() {
                 {
                   label: "Total courses",
                   value: data.counts.courses,
-                  href: "/admin/courses",
+                  href: "/instructor/my-course",
                   icon: BookOpen,
                 },
                 {
                   label: "Published practices",
                   value: data.counts.published_courses,
-                  href: "/admin/courses?status=published",
+                  href: "/instructor/my-course?status=publish",
                   icon: Sparkles,
                 },
                 {

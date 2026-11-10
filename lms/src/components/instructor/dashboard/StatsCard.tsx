@@ -8,13 +8,15 @@ interface StatsCardProps {
   value: string | number;
   icon?: string | { src: string };
   className?: string;
+  isCurrency?: boolean;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({
   title,
   value,
   icon,
-  className,
+  className = "",
+  isCurrency = false,
 }) => {
   return (
     <Card className={`bg-white rounded-xl ${className}`}>
@@ -25,7 +27,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
           </div>
         )}
         <div className="space-y-1 flex flex-col items-center justify-center mt-4">
-          <p className="text-lg md:text-xl font-semibold">{title === 'Total Earnings' ? getCurrencySymbol() : ''}{value}</p>
+          <p className="text-lg md:text-xl font-semibold">{isCurrency && value !== '—' ? getCurrencySymbol() : ''}{typeof value === 'number' ? value.toLocaleString('en-IN', isCurrency ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : undefined) : value}</p>
           <p className="text-center">{title}</p>
         </div>
       </CardContent>

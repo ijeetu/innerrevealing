@@ -72,18 +72,7 @@ export const updateCurriculumOrder = async (
       };
     }
 
-    // Get endpoint from environment variables
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API endpoint path with query parameters
     const apiEndpoint = courseChaptersCurriculumUpdateOrderApiRoute;
@@ -192,18 +181,7 @@ export const deleteCurriculumItem = async (
       };
     }
 
-    // Get endpoint from environment variables
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API endpoint path with query parameters
     const apiEndpoint = `${courseChaptersCurriculumDestroyApiRoute}?id=${deletionData.id}&type=${deletionData.type}`;

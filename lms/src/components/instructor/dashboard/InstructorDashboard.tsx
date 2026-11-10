@@ -1,122 +1,49 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
-import StatsOverview from "@/components/instructor/dashboard/StatsOverview";
-import SalesStatisticsChart from "@/components/instructor/dashboard/SalesStatisticsChart";
-import MostSellingCourses from "@/components/instructor/dashboard/MostSellingCourses";
-import CoursesTable from "@/components/instructor/dashboard/CoursesTable";
-import ProfileCompletionCard from "@/components/instructor/ProfileCompletionCard";
-import EmptyCourseView from "@/components/instructor/EmptyCourseView";
-import { getInstructorDashboard, GetInstructorDashboardParams, InstructorDashboardData, OverviewStats, ProfileCompletion } from "@/utils/api/instructor/dashboad/getInstructorDashboard";
-import { extractErrorMessage } from "@/utils/helpers";
-import toast from "react-hot-toast";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SalesChartData } from "@/utils/api/instructor/course/getCourseDetails";
+import { useCallback, useEffect, useState } from 'react';
+import StatsOverview from './StatsOverview';
+import SalesStatisticsChart from './SalesStatisticsChart';
+import MostSellingCourses from './MostSellingCourses';
+import CoursesTable from './CoursesTable';
+import ProfileCompletionCard from '@/components/instructor/ProfileCompletionCard';
+import { getInstructorDashboard, type GetInstructorDashboardParams, type InstructorDashboardData } from '@/utils/api/instructor/dashboad/getInstructorDashboard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function InstructorDashboard() {
-  // Local state for dashboard data
   const [dashboardData, setDashboardData] = useState<InstructorDashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Fetch dashboard data function
-  const fetchInstructorDashboard = async (params?: {
-    id?: number;
-    page?: number;
-    per_page?: number;
-  }) => {
-    setIsLoading(true);
-
+  const fetchInstructorDashboard = useCallback(async (params?: GetInstructorDashboardParams, background = false) => {
+    if (!background) setIsLoading(true);
+    setError('');
     try {
-      // Build API parameters
-      const apiParams: GetInstructorDashboardParams = {
-        id: params?.id,
-        page: params?.page,
-        per_page: params?.per_page,
-      };
-
-      // Fetch dashboard data
-      const response = await getInstructorDashboard(apiParams);
-
-      if (response) {
-        // Check if API returned an error (error: true in response)
-        if (!response.error) {
-          if (response.data) {
-            setDashboardData(response.data);
-          }
-        } else {
-          console.log("API error:", response.message);
-          if (response.message !== "Your instructor account has been suspended. Please contact support.") {
-            toast.error(response.message || "Failed to fetch dashboard data");
-            setDashboardData(null);
-          }
-        }
-      } else {
-        console.log("response is null in component", response);
-        setDashboardData(null);
-      }
-    } catch (error) {
-      extractErrorMessage(error);
-      setDashboardData(null);
+      const response = await getInstructorDashboard(params);
+      if (!response || response.error || !response.data) throw new Error(response?.message || 'Could not load your dashboard. Please try again.');
+      setDashboardData(response.data);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Could not load your dashboard.');
     } finally {
-      setIsLoading(false);
+      if (!background) setIsLoading(false);
     }
-  };
-
-  // Fetch dashboard data on component mount
-  useEffect(() => {
-    fetchInstructorDashboard();
   }, []);
 
+  useEffect(() => { void fetchInstructorDashboard(); }, [fetchInstructorDashboard]);
   const profileCompletion = dashboardData?.profile_completion;
-  const chartData = dashboardData?.sales_statistics;
-  const totalCouses = dashboardData?.overview_stats && dashboardData?.overview_stats?.total_courses.value;
 
-
-  return (
-    <div className="space-y-6">
-      {
-        profileCompletion?.percentage && profileCompletion?.percentage < 100 &&
-        <ProfileCompletionCard profileCompletion={profileCompletion as ProfileCompletion} />
-      }
-
-      {
-        isLoading ? <>
-          <div className="space-y-6">
-            <Skeleton className="w-full h-80 bg-gray-400" />
-
-            <div className="grid grid-cols-1 between-1200-1399:!grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="between-1200-1399:!col-span-12 xl:col-span-2">
-                <Skeleton className="w-full h-80 bg-gray-400" />
-              </div>
-              <div className="between-1200-1399:!col-span-12">
-                <Skeleton className="w-full h-80 bg-gray-400" />
-              </div>
-            </div>
-            <div>
-              <Skeleton className="w-full h-80 bg-gray-400" />
-            </div>
-          </div>
-        </>
-          :
-          Number(totalCouses) > 0 ?
-            <div className="space-y-6">
-              <StatsOverview data={dashboardData?.overview_stats as OverviewStats} />
-
-              {/* Sales Statistics and Most Selling Courses in a 2-column layout */}
-              <div className="grid grid-cols-1 between-1200-1399:!grid-cols-1 xl:grid-cols-3 gap-6">
-                <div className="between-1200-1399:!col-span-12 xl:col-span-2">
-                  <SalesStatisticsChart data={chartData as SalesChartData} />
-                </div>
-                <div className="between-1200-1399:!col-span-12" >
-                  <MostSellingCourses />
-                </div>
-              </div>
-              <CoursesTable />
-            </div>
-            :
-            !isLoading &&
-            <EmptyCourseView />
-      }
-    </div>
-  );
+  return <div className="space-y-6">
+    {error && <div className="ir-instructor-error" role="alert"><p>{error}</p><button type="button" className="commonBtn" onClick={() => void fetchInstructorDashboard()}>Try again</button></div>}
+    {isLoading ? <div className="space-y-6">
+      <Skeleton className="w-full h-80 bg-gray-200" />
+      <div className="grid grid-cols-1 between-1200-1399:!grid-cols-1 xl:grid-cols-3 gap-6"><div className="between-1200-1399:!col-span-12 xl:col-span-2"><Skeleton className="w-full h-80 bg-gray-200" /></div><div className="between-1200-1399:!col-span-12"><Skeleton className="w-full h-80 bg-gray-200" /></div></div>
+      <Skeleton className="w-full h-80 bg-gray-200" />
+    </div> : dashboardData && <>
+      {profileCompletion && profileCompletion.percentage < 100 && <ProfileCompletionCard profileCompletion={profileCompletion} />}
+      <StatsOverview data={dashboardData.overview_stats} />
+      <div className="grid grid-cols-1 between-1200-1399:!grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="between-1200-1399:!col-span-12 xl:col-span-2"><SalesStatisticsChart data={dashboardData.sales_statistics} /></div>
+        <div className="between-1200-1399:!col-span-12"><MostSellingCourses /></div>
+      </div>
+      <CoursesTable onCourseChange={() => void fetchInstructorDashboard(undefined, true)} />
+    </>}
+  </div>;
 }

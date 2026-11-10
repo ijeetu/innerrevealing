@@ -8,7 +8,6 @@ import "swiper/css/pagination";
 import 'react-quill-new/dist/quill.snow.css';
 import { Toaster } from "react-hot-toast";
 import Script from "next/script";
-import { cookies } from "next/headers";
 import { getSystemLanguages } from "@/server/catalogue";
 
 interface InitialLangData {
@@ -52,9 +51,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const langCookie = cookieStore.get("lang")?.value ?? "";
-  const initialLang = await fetchInitialLanguage(langCookie);
+  const initialLang = await fetchInitialLanguage("en");
 
   return (
     <html lang={initialLang?.code ?? "en"} dir={initialLang?.isRTL ? "rtl" : "ltr"}>

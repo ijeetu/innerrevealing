@@ -51,6 +51,8 @@ const SalesStatisticsChart: React.FC<SalesChartDataProps> = ({ data }) => {
   const direction = getDirection();
   const isRTL = direction === "rtl";
   const chartData = data;
+  const [period, setPeriod] = useState("yearly");
+  const selectedData = (period === "yearly" ? chartData?.yearly : period === "monthly" ? chartData?.monthly : chartData?.weekly) || [];
 
   // Custom tooltip to match the image
   const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
@@ -86,8 +88,6 @@ const SalesStatisticsChart: React.FC<SalesChartDataProps> = ({ data }) => {
     return null;
   };
 
-  const [period, setPeriod] = useState("yearly");
-
   const handlePeriodChange = (value: string): void => {
     setPeriod(value);
   };
@@ -113,25 +113,25 @@ const SalesStatisticsChart: React.FC<SalesChartDataProps> = ({ data }) => {
         <CardDescription>
           <div className={`flex items-center gap-4 ${isRTL ? "justify-start" : "justify-end"} py-4 px-4 overflow-x-auto`} dir={isRTL ? "rtl" : "ltr"}>
             <div className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#0186D8]"></span>
-              <span className="text-xs font-medium text-gray-600">{t("profit")}</span>
+              <span className="h-2.5 w-2.5 rounded-full bg-[#5700b8]"></span>
+              <span className="text-xs font-medium text-gray-600">{t("earnings")}</span>
             </div>
             <div className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#00E396]"></span>
+              <span className="h-2.5 w-2.5 rounded-full bg-[#738b71]"></span>
               <span className="text-xs font-medium text-gray-600">{t("revenue")}</span>
             </div>
             <div className="flex items-center gap-1.5 whitespace-nowrap">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#FEB019]"></span>
+              <span className="h-2.5 w-2.5 rounded-full bg-[#c28b49]"></span>
               <span className="text-xs font-medium text-gray-600">{t("sales")}</span>
             </div>
           </div>
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-[400px] w-full">
+        {selectedData.length === 0 ? <div className="ir-instructor-chart-empty"><strong>No completed sales in this period</strong><p>Sales, revenue and earnings will appear here when learners complete a paid order.</p></div> : <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={period === "yearly" ? chartData?.yearly : period === "monthly" ? chartData?.monthly : chartData?.weekly}
+              data={selectedData}
               margin={{ 
                 top: 10, 
                 right: isRTL ? 40 : 10, 
@@ -141,12 +141,12 @@ const SalesStatisticsChart: React.FC<SalesChartDataProps> = ({ data }) => {
             >
               <defs>
                 <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#00E396" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#00E396" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#738b71" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#738b71" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#FEB019" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#FEB019" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#c28b49" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#c28b49" stopOpacity={0}/>
                 </linearGradient>
               </defs>
               <CartesianGrid
@@ -182,40 +182,40 @@ const SalesStatisticsChart: React.FC<SalesChartDataProps> = ({ data }) => {
               />
               <Tooltip 
                 content={<CustomTooltip />} 
-                cursor={{ fill: '#E2F2FF', opacity: 0.4 }}
+                cursor={{ fill: '#eee4f7', opacity: 0.4 }}
               />
               <Bar
                 dataKey="profit"
-                fill="#0186D8"
+                fill="#5700b8"
                 radius={[4, 4, 0, 0]}
                 barSize={12}
-                name={t("profit")}
+                name={t("earnings")}
               />
               <Area
                 type="monotone"
                 dataKey="revenue"
-                stroke="#00E396"
+                stroke="#738b71"
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorRevenue)"
                 dot={false}
-                activeDot={{ r: 4, fill: '#00E396', strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: '#738b71', strokeWidth: 0 }}
                 name={t("revenue")}
               />
               <Area
                 type="monotone"
                 dataKey="sales"
-                stroke="#FEB019"
+                stroke="#c28b49"
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorSales)"
                 dot={false}
-                activeDot={{ r: 4, fill: '#FEB019', strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: '#c28b49', strokeWidth: 0 }}
                 name={t("sales")}
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
+        </div>}
       </CardContent>
     </Card>
   );

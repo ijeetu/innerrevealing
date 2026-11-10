@@ -17,6 +17,7 @@ export type RefundRequestResponse = ApiResponse<RefundRequestResponseData>;
 // Interface for API parameters (matches the API documentation)
 export interface RefundRequestParams {
   course_id: number | string;
+  order_id?: number;
   reason: string;
   user_media?: File; // Optional file upload for refund request
 }
@@ -35,6 +36,7 @@ export const createRefundRequest = async (
     
     // Add required parameters to FormData
     formData.append('course_id', params.course_id.toString());
+    if(params.order_id)formData.append('order_id',String(params.order_id));
     formData.append('reason', params.reason);
 
     // Add optional file upload if provided

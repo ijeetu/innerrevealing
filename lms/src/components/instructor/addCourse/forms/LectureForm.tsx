@@ -34,6 +34,7 @@ import FormSubmitLoader from "@/components/Loaders/FormSubmitLoader";
 import { allowedDocTypes, allowedVideoTypes, base64ToFile } from "@/utils/helpers";
 import {
   uploadFileInChunks,
+  MAX_LECTURE_BYTES,
   ChunkUploadProgress as ChunkUploadProgressType,
 } from "@/utils/api/instructor/createCourseApis/create-course/chunkedUpload";
 import ChunkUploadProgressBar from "./ChunkUploadProgressBar";
@@ -333,6 +334,11 @@ export default function LectureForm({ setActiveTab }: { setActiveTab: (tab: TabT
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const maxSize = settingData?.data?.max_chunk_size;
     const file = e.target.files?.[0] || null;
+    if (file && file.size > MAX_LECTURE_BYTES) {
+      toast.error('Please choose a lecture file of 50 MB or smaller.');
+      e.target.value = '';
+      return;
+    }
     dispatch(setLectureData({ ...lectureData, lectureFile: file }));
 
     if (file && errors.lectureFile) {
@@ -768,7 +774,8 @@ export default function LectureForm({ setActiveTab }: { setActiveTab: (tab: TabT
             error={errors.lectureFile}
           />
 
-          {/* Chunk upload progress bar — shown during upload */}
+          <p className="text-xs text-gray-500">Maximum file size: 50 MB.</p>
+          {/* Upload progress — confirmed complete only after the server saves the file. */}
           {chunkProgress && (
             <ChunkUploadProgressBar progress={chunkProgress} />
           )}

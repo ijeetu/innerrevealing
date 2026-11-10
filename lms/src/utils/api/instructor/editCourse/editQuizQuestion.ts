@@ -110,18 +110,7 @@ export const updateQuizQuestion = async (
       };
     }
 
-    // Get endpoint from environment variables
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API URL for quiz question update
     const apiUrl = courseChaptersCurriculumQuizUpdateQuestionApiRoute;
@@ -227,18 +216,7 @@ export const updateQuiz = async (
 ): Promise<ApiResponse<QuizUpdateSubmissionResponse>> => {
   try {
 
-    // Get endpoint from environment variables
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API URL for quiz update
     const apiUrl = courseChaptersCurriculumQuizUpdateApiRoute;

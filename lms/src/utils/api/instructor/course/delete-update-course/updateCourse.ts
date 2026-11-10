@@ -92,19 +92,7 @@ export const updateCourse = async (
 ): Promise<ApiResponse<CourseCreationSubmissionResponse>> => {
   try {
 
-    // Get API URL from environment variables
-    const baseURL = process.env.NEXT_PUBLIC_API_URL;
-    const endpoint = process.env.NEXT_PUBLIC_END_POINT;
 
-    if (!baseURL || !endpoint) {
-      return {
-        success: false,
-        data: null,
-        error: "API configuration missing: NEXT_PUBLIC_API_URL or NEXT_PUBLIC_END_POINT",
-        message: "API configuration missing: NEXT_PUBLIC_API_URL or NEXT_PUBLIC_END_POINT",
-        code: 500
-      };
-    }
 
     // Create the API URL for course update
     const apiUrl = updateCourseApiRoute;
@@ -120,9 +108,10 @@ export const updateCourse = async (
     if (formData) {
       // Map all the course update form fields - basic course fields
       const basicFields = [
-        'title', 'short_description', 'level', 'course_type',
+        'title', 'short_description', 'description', 'level', 'course_type',
         'price', 'discount_price', 'category_id', 'is_active', 'meta_tags',
-        'meta_title', 'meta_description', 'language_id', 'status', 'sequential_access', 'certificate_enabled'
+        'meta_title', 'meta_description', 'language_id', 'status', 'sequential_access', 'certificate_enabled', 'certificate_fee',
+        'course_tags', 'learnings_data', 'requirements_data', 'instructors'
       ];
 
       basicFields.forEach(field => {
@@ -163,10 +152,6 @@ export const updateCourse = async (
         instructorsEntries.forEach(([key, value]) => {
           apiFormData.append(key, value);
         });
-      }
-      else {
-        // Send explicit empty array so backend clears instructors when user removes all
-        apiFormData.append('instructors[0]', '');
       }
 
       // Handle file uploads - course media files

@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import LanguageModal from "../../modals/LanguageModal";
 import MobileNav from "./MobileNav";
 import { usePathname } from "next/navigation";
 import SignInModal from "@/components/auth/email/SignInModal";
@@ -79,7 +78,6 @@ const Header: React.FC = () => {
 
             <div className="hidden md:flex items-center gap-4 shrink-0">
               <Link href="/cart" className="p-2" aria-label="Your cart"><ShoppingBag size={21} /></Link>
-              <LanguageModal />
               <span className="ir-lms-header-divider" aria-hidden="true" />
               {isLogin ? <ProfileDropdown /> : (
                 <div className="flexCenter gap-4">

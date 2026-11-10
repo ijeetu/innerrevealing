@@ -17,6 +17,8 @@ import { RefundRequestData } from "@/utils/api/instructor/refund-request/getRefu
 import { extractApiErrorMessage, formatDateForLessonsOverview, getCurrencySymbol } from "@/utils/helpers";
 import { respondToRefundRequest } from "@/utils/api/instructor/refund-request/refundRequestsRespond";
 import toast from "react-hot-toast";
+import {userDataSelector} from "@/redux/reducers/userSlice";
+import {webRequest} from "@/utils/webApi";
 import { dataSelector } from "@/redux/reducers/settingsSlice";
 
 interface ViewRequestModalProps {
@@ -32,6 +34,11 @@ export default function ViewRequestModal({ refundRequestData, onSuccess }: ViewR
     const [note, setNote] = useState("");
     const [loading, setLoading] = useState(false);
     const setting = useSelector(dataSelector);
+    const actor=useSelector(userDataSelector) as {role?:string};
+    const [refundMethod,setRefundMethod]=useState(refundRequestData.refund_method||'manual');
+    const [reference,setReference]=useState('');
+    const [confirmed,setConfirmed]=useState(false);
+    const executeRefund=async()=>{setLoading(true);try{const result=await webRequest<{status:string}>(`/api/refund-requests/${refundRequestData.id}/complete`,{method:'POST',body:{method:refundMethod,reference,confirm:confirmed}});toast.success(result.status==='refunded'?'Refund completion recorded.':'Refund is still being processed. Retry this same request to check its status.');onSuccess?.();setOpen(false);}catch(error){toast.error(error instanceof Error?error.message:'Could not confirm refund status.');}finally{setLoading(false);}};
 
     const handleResponse = async (recommendation: "approve" | "reject") => {
         setLoading(true);
@@ -276,18 +283,20 @@ export default function ViewRequestModal({ refundRequestData, onSuccess }: ViewR
                     </div>
                 </div>
 
+                {actor.role==='superadmin'&&['approved','processing'].includes(refundRequestData.status)&&<div className="px-4 pb-5 space-y-3 border-t borderColor pt-4"><h3 className="font-semibold">Complete approved refund</h3><select value={refundMethod} onChange={event=>setRefundMethod(event.target.value as 'manual'|'razorpay')} className="border borderColor p-2 rounded w-full"><option value="manual">Record completed bank / UPI refund</option>{refundRequestData.payment_method==='razorpay'&&<option value="razorpay">Request / reconcile Razorpay refund</option>}</select>{refundMethod==='manual'&&<input value={reference} onChange={event=>setReference(event.target.value)} placeholder="Actual bank refund reference" maxLength={200} className="border borderColor p-2 rounded w-full"/>}<label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={event=>setConfirmed(event.target.checked)}/>{refundMethod==='manual'?'I confirm the bank refund has already been transferred.':'I understand this requests a real refund through Razorpay.'}</label><button className="commonBtn" disabled={loading||!confirmed||(refundMethod==='manual'&&!reference.trim())} onClick={executeRefund}>{loading?'Checking refund…':refundMethod==='manual'?'Record refund transfer':'Confirm gateway refund'}</button></div>}
                 {/* Footer */}
                 <div className="flex gap-3 px-4 pb-6">
 
                     <button
                         onClick={() => handleResponse("approve")}
+                        disabled={loading||['processing','refunded'].includes(refundRequestData.status)}
                         className={`${loading ? "cursor-not-allowed opacity-50" : ""} commonBtn flex-1 shrink-0`}>
                         {t("approve")}
                     </button>
 
                     <button
                         onClick={() => handleResponse("reject")}
-                        disabled={loading}
+                        disabled={loading||['processing','refunded'].includes(refundRequestData.status)}
                         className={`${loading ? "cursor-not-allowed opacity-50" : ""} flex-1 border primaryBorder primaryColor rounded-[4px] py-2 shrink-0 ${loading ? "cursor-not-allowed" : ""}`}>
                         {t("reject")}
                     </button>

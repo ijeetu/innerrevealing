@@ -14,7 +14,10 @@
     "start": "next start --hostname 127.0.0.1",
     "export": "next build",
     "hostdev": "next dev --hostname 0.0.0.0",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:instructor": "node scripts/test-instructor.cjs",
+    "test:education": "node scripts/test-education.cjs",
+    "test:operations": "node scripts/test-operations.cjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

@@ -269,6 +269,7 @@ export default function ResourcesForm({ setActiveTab }: { setActiveTab: (tab: Ta
   // Handle file change and update resourcesData
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    if (file && file.size > 50 * 1024 * 1024) { toast.error('Please choose a resource file of 50 MB or smaller.'); e.target.value = ''; return; }
     dispatch(setResourcesData({ ...resourcesData, resource_file: file }));
 
     // Clear file-related errors when file is selected

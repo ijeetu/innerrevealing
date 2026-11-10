@@ -46,6 +46,7 @@ import RemoveFIleBtn from "@/components/commonComp/RemoveFIleBtn";
 import { useTranslation } from "@/hooks/useTranslation";
 import { Category, getCategories } from "@/utils/api/instructor/course/getCategories";
 import { userDataSelector } from "@/redux/reducers/userSlice";
+import { staffRole } from "@/components/instructor/Layout/staffAccess";
 import { usePathname } from "next/navigation";
 import { UserDetails } from "@/utils/api/user/getUserDetails";
 import { isRTLSelector } from "@/redux/reducers/languageSlice";
@@ -438,6 +439,7 @@ const CourseDetailsTab: React.FC = () => {
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) { toast.error('Please choose a thumbnail of 2 MB or smaller.'); e.target.value = ''; return; }
       setThumbnailFile(file);
 
       // Convert file to base64 data URL for Redux persistence
@@ -454,6 +456,7 @@ const CourseDetailsTab: React.FC = () => {
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 50 * 1024 * 1024) { toast.error('Please choose a preview video of 50 MB or smaller.'); e.target.value = ''; return; }
       setPreviewVideo(file);
 
       // Convert file to base64 data URL for Redux persistence
@@ -477,6 +480,7 @@ const CourseDetailsTab: React.FC = () => {
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
+      if (file.size > 2 * 1024 * 1024) { toast.error('Please choose a thumbnail of 2 MB or smaller.'); return; }
       setThumbnailFile(file);
 
       // Convert file to base64 data URL for Redux persistence
@@ -495,6 +499,7 @@ const CourseDetailsTab: React.FC = () => {
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
+      if (file.size > 50 * 1024 * 1024) { toast.error('Please choose a preview video of 50 MB or smaller.'); return; }
       setPreviewVideo(file);
 
       // Convert file to base64 data URL for Redux persistence
@@ -930,7 +935,7 @@ const CourseDetailsTab: React.FC = () => {
 
           {/* Co-Instructor */}
           {
-            userData?.instructor_details?.type === "team" &&
+            (Boolean(staffRole(userData)) || userData?.instructor_details?.type === "team") &&
             <div>
               {
                 teamMembers.length > 0 ? (

@@ -10,6 +10,7 @@ import { ApiError } from '../errors';
 import { failure } from '../response';
 import { AdminActor,adminList,audit,getRow,idValue,insertRow,transaction } from './core';
 import { detectMedia,parseByteRange } from './media-types';
+import { assertLessonSequence } from '../lesson-access';
 
 function uploadDirectory():string {
   return path.resolve(process.env.UPLOAD_DIR||'/home/innerrevealing/uploads');
@@ -34,10 +35,14 @@ export async function uploadMedia(request:Request,actor:AdminActor) {
   if(!request.headers.get('content-type')?.startsWith('multipart/form-data'))throw new ApiError(415,'Use a multipart file upload.');
   const form=await request.formData();const file=form.get('file');
   if(!file||typeof file==='string'||typeof file.arrayBuffer!=='function')throw new ApiError(422,'Choose a file to upload.');
-  if(!file.size||file.size>maximum)throw new ApiError(413,`Uploads must be nonempty and ${Math.floor(maximum/1024/1024)} MB or smaller.`);
-  const data=Buffer.from(await file.arrayBuffer());const format=detectMedia(data,file.type);
   const purpose=form.get('purpose')||'course';
   if(!['image','course'].includes(String(purpose)))throw new ApiError(422,'Choose image or course as the upload purpose.');
+  return storeMediaFile(file,actor,purpose as 'image'|'course',maximum);
+}
+
+export async function storeMediaFile(file:File,actor:AdminActor,purpose:'image'|'course'='course',maximum=Math.min(512,Math.max(1,Number(process.env.UPLOAD_MAX_MB)||50))*1024*1024) {
+  if(!file.size||file.size>maximum)throw new ApiError(413,`Uploads must be nonempty and ${Math.floor(maximum/1024/1024)} MB or smaller.`);
+  const data=Buffer.from(await file.arrayBuffer());const format=detectMedia(data,file.type);
   if(purpose==='image'&&format.kind!=='image')throw new ApiError(422,'A public image upload must be an image file.');
   const name=randomUUID()+'.'+format.extension;
   const original=String(file.name||'upload').replace(/[\u0000-\u001f\u007f\\/]/g,'_').slice(0,255);
@@ -65,7 +70,7 @@ export async function mediaAdmin(method:string,parts:string[],actor:AdminActor,p
     const result=await transaction(async connection=>{
       const media=await getRow('ir_media',id,connection,true);filename=storagePath(media.storage_name);
       const url=`/api/media/${id}`;
-      const [refs]=await connection.execute<RowDataPacket[]>('SELECT (SELECT COUNT(*) FROM ir_lessons WHERE media_id=?) + (SELECT COUNT(*) FROM ir_courses WHERE image=?) + (SELECT COUNT(*) FROM ir_categories WHERE image=?) + (SELECT COUNT(*) FROM ir_settings WHERE setting_key=\'web\' AND JSON_SEARCH(setting_value,\'one\',?) IS NOT NULL) AS total',[id,url,url,url]);
+      const [refs]=await connection.execute<RowDataPacket[]>('SELECT (SELECT COUNT(*) FROM ir_lessons WHERE media_id=?) + (SELECT COUNT(*) FROM ir_courses WHERE image=?) + (SELECT COUNT(*) FROM ir_categories WHERE image=?) + (SELECT COUNT(*) FROM ir_settings WHERE setting_key=\'web\' AND JSON_SEARCH(setting_value,\'one\',?) IS NOT NULL) + (SELECT COUNT(*) FROM ir_assignments WHERE media_id=?) + (SELECT COUNT(*) FROM ir_assignment_files WHERE media_id=?) + (SELECT COUNT(*) FROM ir_lesson_resources WHERE media_id=?) + (SELECT COUNT(*) FROM ir_course_details WHERE JSON_SEARCH(metadata,\'one\',?) IS NOT NULL) AS total',[id,url,url,url,id,id,id,url]);
       if(Number(refs[0].total))throw new ApiError(409,'Remove this file from lessons and site content before deleting it.');
       await connection.execute('DELETE FROM ir_media WHERE id=?',[id]);
       await audit(connection,actor,'media.delete','media',id);
@@ -84,12 +89,19 @@ export async function serveMedia(request:Request,id:number):Promise<Response> {
       const user=await getSessionUser(request);
       let allowed=user?.role==='admin'||user?.role==='superadmin';
       if(!allowed) {
-        const [previews]=await database().execute<RowDataPacket[]>(`SELECT l.id FROM ir_lessons l JOIN ir_courses c ON c.id=l.course_id WHERE l.media_id=? AND l.is_published=1 AND l.is_preview=1 AND c.status='published' LIMIT 1`,[id]);
+        const [intro]=await database().execute<RowDataPacket[]>(`SELECT d.course_id FROM ir_course_details d JOIN ir_courses c ON c.id=d.course_id JOIN ir_users u ON u.id=c.instructor_id AND u.is_active=1 WHERE c.status='published' AND JSON_UNQUOTE(JSON_EXTRACT(d.metadata,'$.preview_video'))=? LIMIT 1`,[`/api/media/${id}`]);allowed=Boolean(intro.length);
+      }
+      if(!allowed) {
+        const [previews]=await database().execute<RowDataPacket[]>(`SELECT l.id FROM ir_lessons l JOIN ir_courses c ON c.id=l.course_id JOIN ir_users author ON author.id=c.instructor_id AND author.is_active=1 WHERE (l.media_id=? OR EXISTS(SELECT 1 FROM ir_lesson_resources r WHERE r.lesson_id=l.id AND r.media_id=?) OR EXISTS(SELECT 1 FROM ir_assignments a WHERE a.lesson_id=l.id AND a.media_id=?)) AND l.is_published=1 AND l.is_preview=1 AND c.status='published' LIMIT 1`,[id,id,id]);
         allowed=Boolean(previews.length);
       }
       if(!allowed&&user) {
-        const [access]=await database().execute<RowDataPacket[]>(`SELECT e.id FROM ir_enrollments e JOIN ir_courses c ON c.id=e.course_id JOIN ir_lessons l ON l.course_id=c.id WHERE l.media_id=? AND l.is_published=1 AND c.status='published' AND e.user_id=? AND e.status='active' LIMIT 1`,[id,user.id]);
-        allowed=Boolean(access.length);
+        const [access]=await database().execute<RowDataPacket[]>(`SELECT l.id FROM ir_enrollments e JOIN ir_courses c ON c.id=e.course_id JOIN ir_lessons l ON l.course_id=c.id WHERE (l.media_id=? OR EXISTS(SELECT 1 FROM ir_lesson_resources r WHERE r.lesson_id=l.id AND r.media_id=?) OR EXISTS(SELECT 1 FROM ir_assignments a WHERE a.lesson_id=l.id AND a.media_id=?)) AND l.is_published=1 AND c.status='published' AND e.user_id=? AND e.status='active' LIMIT 200`,[id,id,id,user.id]);
+        for(const lesson of access){try{await assertLessonSequence(user,Number(lesson.id));allowed=true;break;}catch(error){if(!(error instanceof ApiError)||error.status!==403)throw error;}}
+      }
+      if(!allowed&&user) {
+        const [submissions]=await database().execute<RowDataPacket[]>('SELECT s.id FROM ir_assignment_files f JOIN ir_assignment_submissions s ON s.id=f.submission_id WHERE f.media_id=? AND s.user_id=? LIMIT 1',[id,user.id]);
+        allowed=Boolean(submissions.length);
       }
       if(!allowed)throw new ApiError(user?403:401,'Enroll in this practice to access its media.');
     }
@@ -100,7 +112,7 @@ export async function serveMedia(request:Request,id:number):Promise<Response> {
       'Content-Type':media.mime_type,'X-Content-Type-Options':'nosniff','Accept-Ranges':'bytes',
       'Cache-Control':media.is_public?'public, max-age=86400':'private, no-store',
       'Content-Security-Policy':"frame-ancestors 'self'",
-      'Content-Disposition':`inline; filename*=UTF-8''${encodeURIComponent(media.original_name).replace(/['()*]/g,character=>'%'+character.charCodeAt(0).toString(16))}`,
+      'Content-Disposition':`${['application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/zip','application/vnd.rar','text/plain'].includes(media.mime_type)?'attachment':'inline'}; filename*=UTF-8''${encodeURIComponent(media.original_name).replace(/['()*]/g,character=>'%'+character.charCodeAt(0).toString(16))}`,
     });
     let range;
     try {range=parseByteRange(request.headers.get('range'),info.size);}

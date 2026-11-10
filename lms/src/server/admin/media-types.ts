@@ -3,7 +3,7 @@ import { ApiError } from '../errors';
 export type MediaFormat = { mime: string; extension: string; kind: 'image'|'video'|'audio'|'document' };
 
 export function detectMedia(data: Buffer, declaredType = ''): MediaFormat {
-  if (data.length < 8) throw new ApiError(422,'The file is empty or not a supported media file.');
+  if (!data.length) throw new ApiError(422,'The file is empty or not a supported media file.');
   if (data.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) return {mime:'image/png',extension:'png',kind:'image'};
   if (data[0]===255&&data[1]===216&&data[2]===255) return {mime:'image/jpeg',extension:'jpg',kind:'image'};
   const first=data.subarray(0,16).toString('latin1');
@@ -15,6 +15,15 @@ export function detectMedia(data: Buffer, declaredType = ''): MediaFormat {
   if(data.subarray(0,4).equals(Buffer.from([26,69,223,163])))return declaredType.startsWith('audio/')?{mime:'audio/webm',extension:'webm',kind:'audio'}:{mime:'video/webm',extension:'webm',kind:'video'};
   if(first.startsWith('OggS'))return {mime:'audio/ogg',extension:'ogg',kind:'audio'};
   if(first.startsWith('ID3')||(data[0]===255&&(data[1]&224)===224))return {mime:'audio/mpeg',extension:'mp3',kind:'audio'};
+  if(data.subarray(0,8).equals(Buffer.from([208,207,17,224,161,177,26,225]))&&declaredType==='application/msword')return {mime:'application/msword',extension:'doc',kind:'document'};
+  if(data.subarray(0,4).equals(Buffer.from([80,75,3,4]))&&data.subarray(Math.max(0,data.length-65557)).includes(Buffer.from([80,75,5,6]))) {
+    if(declaredType==='application/vnd.openxmlformats-officedocument.wordprocessingml.document'&&data.includes(Buffer.from('word/document.xml'))&&data.includes(Buffer.from('[Content_Types].xml'))&&!data.includes(Buffer.from('vbaProject.bin')))return {mime:declaredType,extension:'docx',kind:'document'};
+    if(declaredType==='application/zip'||declaredType==='application/x-zip-compressed')return {mime:'application/zip',extension:'zip',kind:'document'};
+  }
+  if(first.startsWith('Rar!\x1a\x07'))return {mime:'application/vnd.rar',extension:'rar',kind:'document'};
+  if(declaredType==='text/plain') {
+    try {const text=new TextDecoder('utf-8',{fatal:true}).decode(data);if(!text.includes('\0')&&!/^\s*(?:<!doctype\s+html|<html\b|<svg\b)/i.test(text))return {mime:'text/plain',extension:'txt',kind:'document'};}catch{}
+  }
   throw new ApiError(422,'Upload a PNG, JPEG, WebP, GIF, PDF, MP4, WebM, MP3, M4A, Ogg or WAV file. HTML, SVG and executable files are not accepted.');
 }
 

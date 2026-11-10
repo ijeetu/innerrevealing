@@ -1,0 +1,13 @@
+.ir-instructor-access { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px; color: #6f6278; }
+.ir-instructor-panel { --sidebar: #241a31; --sidebar-foreground: #fff; --sidebar-border: #46364f; }
+.ir-instructor-brand-area { background: #fffdf9; padding: 8px 20px 10px; }
+.ir-instructor-brand-link { display: block; width: 200px; max-width: 100%; margin-inline: auto; }
+.ir-instructor-logo { display: block; width: 100%; height: auto; object-fit: contain; mix-blend-mode: multiply; }
+.ir-instructor-sidebar-profile { background: #241a31 !important; }
+.ir-instructor-sidebar-nav { background: #241a31 !important; }
+.ir-instructor-sidebar-nav a:focus-visible, .ir-instructor-sidebar-nav button:focus-visible { outline: 2px solid #d7b9ff; outline-offset: 2px; }
+.ir-instructor-header { border-bottom: 1px solid var(--border-color); }
+.ir-instructor-chart-empty { height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 28px; text-align: center; color: #776a80; }
+.ir-instructor-chart-empty strong { color: #3b2c46; font-size: 15px; font-weight: 500; }
+.ir-instructor-chart-empty p { max-width: 340px; font-size: 13px; line-height: 1.7; }
+.ir-instructor-error { border: 1px solid #ecd6d9; background: #fff7f6; color: #9b3e48; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }

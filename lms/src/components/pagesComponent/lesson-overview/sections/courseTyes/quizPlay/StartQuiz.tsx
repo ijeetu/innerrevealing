@@ -2,7 +2,9 @@
 import React from 'react'
 import quizImg from '@/assets/images/lesson-overview/quiz-start.svg'
 import { useDispatch, useSelector } from 'react-redux'
-import { selectedCurriculumItemSelector, setIsCurriculumItemCompleted } from '@/redux/reducers/helpersReducer'
+import { selectedCurriculumItemSelector, setIsCurriculumItemCompleted,setSelectedCurriculumItem } from '@/redux/reducers/helpersReducer'
+import { webRequest } from '@/utils/webApi'
+import type { CurriculumItem } from '@/utils/api/user/getCourse'
 import { startQuiz } from '@/utils/api/user/lesson-overview/quiz/startQuiz'
 import toast from 'react-hot-toast'
 import { extractErrorMessage } from '@/utils/helpers'
@@ -37,6 +39,7 @@ const StartQuiz: React.FC<StartQuizProps> = ({ isStartingQuiz, setIsStartingQuiz
           toast.error(response.message || "Failed to start quiz");
         }
         else {
+          if(selectedCurriculumItem&&response.data?.questions)dispatch(setSelectedCurriculumItem({...selectedCurriculumItem,questions:response.data.questions as CurriculumItem['questions']}));
           setIsStartingQuiz(true);
           // Pass attempt_id to parent component if available
           // The attempt_id is stored in the 'id' field of the response data
@@ -53,9 +56,9 @@ const StartQuiz: React.FC<StartQuizProps> = ({ isStartingQuiz, setIsStartingQuiz
     }
   }
 
-  const handleSkipQuiz = () => {
+  const handleSkipQuiz = async () => {
     if (isQuizSkippable) {
-      dispatch(setIsCurriculumItemCompleted({ completed: true }));
+      try {const lessonId=(selectedCurriculumItem as CurriculumItem&{lesson_id?:number})?.lesson_id;if(!lessonId)throw new Error('Open this quiz from your course to skip it.');await webRequest('/api/education/skip',{method:'POST',body:{lesson_id:lessonId}});dispatch(setIsCurriculumItemCompleted({ completed: true }));}catch(error){toast.error(error instanceof Error?error.message:'This quiz could not be skipped.');}
     }
   }
 

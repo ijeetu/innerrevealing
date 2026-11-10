@@ -1,0 +1,144 @@
+CREATE TABLE IF NOT EXISTS ir_quizzes (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ lesson_id BIGINT UNSIGNED NOT NULL UNIQUE,
+ course_id BIGINT UNSIGNED NOT NULL,
+ title VARCHAR(200) NOT NULL,
+ description TEXT NOT NULL,
+ total_points DECIMAL(10,2) NOT NULL DEFAULT 100,
+ passing_score DECIMAL(10,2) NOT NULL DEFAULT 50,
+ time_limit_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+ max_attempts INT UNSIGNED NOT NULL DEFAULT 0,
+ can_skip BOOLEAN NOT NULL DEFAULT FALSE,
+ is_published BOOLEAN NOT NULL DEFAULT TRUE,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT ir_quizzes_lesson_fk FOREIGN KEY(lesson_id) REFERENCES ir_lessons(id) ON DELETE CASCADE,
+ CONSTRAINT ir_quizzes_course_fk FOREIGN KEY(course_id) REFERENCES ir_courses(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_quiz_questions (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ quiz_id BIGINT UNSIGNED NOT NULL,
+ question TEXT NOT NULL,
+ options JSON NOT NULL,
+ correct_answers JSON NOT NULL,
+ points DECIMAL(10,2) NOT NULL DEFAULT 1,
+ position INT UNSIGNED NOT NULL DEFAULT 0,
+ is_active BOOLEAN NOT NULL DEFAULT TRUE,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT ir_quiz_question_quiz_fk FOREIGN KEY(quiz_id) REFERENCES ir_quizzes(id) ON DELETE CASCADE,
+ KEY ir_quiz_question_order(quiz_id,position)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_quiz_attempts (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ quiz_id BIGINT UNSIGNED NOT NULL,
+ user_id BIGINT UNSIGNED NOT NULL,
+ status ENUM('in_progress','completed') NOT NULL DEFAULT 'in_progress',
+ question_snapshot JSON NOT NULL,
+ total_points DECIMAL(10,2) NOT NULL,
+ passing_score DECIMAL(10,2) NOT NULL,
+ time_limit_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+ score DECIMAL(10,2) NOT NULL DEFAULT 0,
+ correct_count INT UNSIGNED NOT NULL DEFAULT 0,
+ passed BOOLEAN NOT NULL DEFAULT FALSE,
+ started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ finished_at DATETIME NULL,
+ time_taken INT UNSIGNED NOT NULL DEFAULT 0,
+ CONSTRAINT ir_quiz_attempt_quiz_fk FOREIGN KEY(quiz_id) REFERENCES ir_quizzes(id) ON DELETE CASCADE,
+ CONSTRAINT ir_quiz_attempt_user_fk FOREIGN KEY(user_id) REFERENCES ir_users(id) ON DELETE CASCADE,
+ KEY ir_quiz_attempt_user(quiz_id,user_id,started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_quiz_answers (
+ attempt_id BIGINT UNSIGNED NOT NULL,
+ question_id BIGINT UNSIGNED NOT NULL,
+ answers JSON NOT NULL,
+ score DECIMAL(10,2) NOT NULL DEFAULT 0,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ PRIMARY KEY(attempt_id,question_id),
+ CONSTRAINT ir_quiz_answer_attempt_fk FOREIGN KEY(attempt_id) REFERENCES ir_quiz_attempts(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_assignments (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ lesson_id BIGINT UNSIGNED NOT NULL UNIQUE,
+ course_id BIGINT UNSIGNED NOT NULL,
+ title VARCHAR(200) NOT NULL,
+ description TEXT NOT NULL,
+ instructions TEXT NOT NULL,
+ due_days INT UNSIGNED NOT NULL DEFAULT 0,
+ points DECIMAL(10,2) NOT NULL DEFAULT 100,
+ max_file_size INT UNSIGNED NOT NULL DEFAULT 10,
+ allowed_file_types JSON NOT NULL,
+ media_id BIGINT UNSIGNED NULL,
+ can_skip BOOLEAN NOT NULL DEFAULT FALSE,
+ is_active BOOLEAN NOT NULL DEFAULT TRUE,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT ir_assignment_lesson_fk FOREIGN KEY(lesson_id) REFERENCES ir_lessons(id) ON DELETE CASCADE,
+ CONSTRAINT ir_assignment_course_fk FOREIGN KEY(course_id) REFERENCES ir_courses(id) ON DELETE CASCADE,
+ CONSTRAINT ir_assignment_media_fk FOREIGN KEY(media_id) REFERENCES ir_media(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_assignment_submissions (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ assignment_id BIGINT UNSIGNED NOT NULL,
+ user_id BIGINT UNSIGNED NOT NULL,
+ comment TEXT NULL,
+ status ENUM('submitted','accepted','rejected') NOT NULL DEFAULT 'submitted',
+ points DECIMAL(10,2) NULL,
+ feedback TEXT NULL,
+ reviewed_by BIGINT UNSIGNED NULL,
+ submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT ir_submission_assignment_fk FOREIGN KEY(assignment_id) REFERENCES ir_assignments(id) ON DELETE CASCADE,
+ CONSTRAINT ir_submission_user_fk FOREIGN KEY(user_id) REFERENCES ir_users(id) ON DELETE CASCADE,
+ CONSTRAINT ir_submission_reviewer_fk FOREIGN KEY(reviewed_by) REFERENCES ir_users(id) ON DELETE SET NULL,
+ KEY ir_submission_user(assignment_id,user_id,submitted_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_assignment_files (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ submission_id BIGINT UNSIGNED NOT NULL,
+ media_id BIGINT UNSIGNED NULL,
+ url VARCHAR(2000) NULL,
+ CONSTRAINT ir_assignment_file_submission_fk FOREIGN KEY(submission_id) REFERENCES ir_assignment_submissions(id) ON DELETE CASCADE,
+ CONSTRAINT ir_assignment_file_media_fk FOREIGN KEY(media_id) REFERENCES ir_media(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_reviews (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ user_id BIGINT UNSIGNED NOT NULL,
+ course_id BIGINT UNSIGNED NULL,
+ instructor_id BIGINT UNSIGNED NULL,
+ rating TINYINT UNSIGNED NOT NULL,
+ review TEXT NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ UNIQUE KEY ir_review_course(user_id,course_id),
+ UNIQUE KEY ir_review_instructor(user_id,instructor_id),
+ CONSTRAINT ir_review_user_fk FOREIGN KEY(user_id) REFERENCES ir_users(id) ON DELETE CASCADE,
+ CONSTRAINT ir_review_course_fk FOREIGN KEY(course_id) REFERENCES ir_courses(id) ON DELETE CASCADE,
+ CONSTRAINT ir_review_instructor_fk FOREIGN KEY(instructor_id) REFERENCES ir_users(id) ON DELETE CASCADE,
+ CONSTRAINT ir_review_rating CHECK(rating BETWEEN 1 AND 5),
+ CONSTRAINT ir_review_target CHECK((course_id IS NOT NULL AND instructor_id IS NULL) OR (course_id IS NULL AND instructor_id IS NOT NULL))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS ir_discussions (
+ id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ course_id BIGINT UNSIGNED NOT NULL,
+ lesson_id BIGINT UNSIGNED NULL,
+ user_id BIGINT UNSIGNED NOT NULL,
+ parent_id BIGINT UNSIGNED NULL,
+ message TEXT NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT ir_discussion_course_fk FOREIGN KEY(course_id) REFERENCES ir_courses(id) ON DELETE CASCADE,
+ CONSTRAINT ir_discussion_lesson_fk FOREIGN KEY(lesson_id) REFERENCES ir_lessons(id) ON DELETE SET NULL,
+ CONSTRAINT ir_discussion_user_fk FOREIGN KEY(user_id) REFERENCES ir_users(id) ON DELETE CASCADE,
+ CONSTRAINT ir_discussion_parent_fk FOREIGN KEY(parent_id) REFERENCES ir_discussions(id) ON DELETE CASCADE,
+ KEY ir_discussion_thread(course_id,parent_id,created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

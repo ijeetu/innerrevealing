@@ -97,9 +97,10 @@ export const createCourse = async (
 
     // Map all the course creation form fields - basic course fields
     const basicFields = [
-      'title', 'short_description', 'level', 'course_type',
+      'title', 'short_description', 'description', 'level', 'course_type',
       'price', 'discount_price', 'category_id', 'is_active', 'meta_tags',
-      'meta_title', 'meta_description', 'language_id', 'status', 'sequential_access', 'certificate_enabled'
+      'meta_title', 'meta_description', 'language_id', 'status', 'sequential_access', 'certificate_enabled', 'certificate_fee',
+      'course_tags', 'learnings_data', 'requirements_data', 'instructors'
     ];
 
     basicFields.forEach(field => {

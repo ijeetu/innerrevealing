@@ -16,6 +16,8 @@ interface DeleteConfirmationModalProps {
     onClose: () => void;
     onConfirm: () => void;
     onOpenChange: (open: boolean) => void;
+    isPending?: boolean;
+    error?: string;
 }
 
 export default function DeleteConfirmationModal({
@@ -23,6 +25,8 @@ export default function DeleteConfirmationModal({
     onClose,
     onConfirm,
     onOpenChange,
+    isPending = false,
+    error,
 }: DeleteConfirmationModalProps) {
     const { t } = useTranslation();
     return (
@@ -33,17 +37,20 @@ export default function DeleteConfirmationModal({
                     {t("are_you_sure_you_want_to_delete_this_course_this_action_cannot_be_undone")}
                 </DialogTitle>
                 {/* </DialogHeader> */}
+                {error && <p role="alert" className="text-sm text-red-700 mt-4">{error}</p>}
                 <DialogFooter className="flex justify-center gap-3 sm:justify-center mt-6">
                     <Button
                         variant="destructive"
                         onClick={onConfirm}
+                        disabled={isPending}
                         className="bg-[#DB3D26] text-white px-4 py-1 text-base rounded-md h-12 min-w-[100px]"
                     >
-                        {t("yes")}
+                        {isPending ? "Deleting…" : t("yes")}
                     </Button>
                     <Button
                         variant="outline"
                         onClick={onClose}
+                        disabled={isPending}
                         className="border-gray-200 text-gray-500 px-4 py-1 text-base rounded-md h-12 min-w-[100px]"
                     >
                         {t("cancel")}

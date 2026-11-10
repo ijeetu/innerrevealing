@@ -16,24 +16,30 @@ interface CourseRow extends RowDataPacket {
 const COURSE_FROM = `FROM ir_courses c
   JOIN ir_users u ON u.id = c.instructor_id AND u.is_active = 1
   LEFT JOIN ir_categories cat ON cat.id = c.category_id
-  LEFT JOIN ir_languages lang ON lang.id = c.language_id`;
+  LEFT JOIN ir_languages lang ON lang.id = c.language_id
+  LEFT JOIN ir_course_details details ON details.course_id=c.id`;
 const COURSE_SELECT = `SELECT c.*, cat.name AS category_name, u.id AS author_id,
-  u.name AS author_name, lang.name AS language_name ${COURSE_FROM}`;
+  u.name AS author_name, lang.name AS language_name, details.metadata AS course_metadata,
+  (SELECT COUNT(*) FROM ir_reviews r WHERE r.course_id=c.id) rating_count,
+  (SELECT AVG(r.rating) FROM ir_reviews r WHERE r.course_id=c.id) rating_average,
+  (SELECT COUNT(*) FROM ir_enrollments e WHERE e.course_id=c.id AND e.status='active') enrollment_count ${COURSE_FROM}`;
 
 function courseData(row: CourseRow): CourseDetails {
   const price = Number(row.price);
+  const meta = (typeof row.course_metadata==='string'?JSON.parse(row.course_metadata):row.course_metadata)||{};
+  const original = Number(meta.list_price??price);
   return {
     id: Number(row.id), slug: row.slug, title: row.title, short_description: row.short_description,
     description: row.description ? safeContent(row.description, 'Course description') : null, image: row.image, category_id: Number(row.category_id || 0),
     category_name: row.category_name || '', level: row.level, course_type: price > 0 ? 'paid' : 'free',
-    sequential_access: false, certificate_enabled: false, certificate_fee: null,
-    ratings: 0, average_rating: 0, author_name: row.author_name, price, discount_price: price,
-    total_tax_percentage: 0, tax_type: 'exclusive', original_price: price, course_discount: 0,
+    sequential_access: Boolean(meta.sequential_access), certificate_enabled: Boolean(meta.certificate_enabled), certificate_fee: meta.certificate_fee??null,
+    ratings: Number(row.rating_count||0), average_rating: Number(row.rating_average||0), author_name: row.author_name, price, discount_price: price,
+    total_tax_percentage: 0, tax_type: 'exclusive', original_price: original, course_discount: original-price,
     subtotal: price, promo_discount: 0, taxable_amount: price, tax_percentage: 0, tax_amount: 0,
-    total: price, discount_percentage: 0, is_purchased: false, is_wishlist: false,
-    enroll_students: 0, last_updated: row.updated_at, meta_title: row.title,
-    meta_description: row.short_description, meta_image: row.image, learnings: [], requirements: [],
-    reviews: [], tags: [], language: row.language_name || '',
+    total: price, discount_percentage: original>0?Math.round((1-price/original)*100):0, is_purchased: false, is_wishlist: false,
+    enroll_students: Number(row.enrollment_count||0), last_updated: row.updated_at, meta_title: meta.meta_title || row.title,
+    meta_description: meta.meta_description || row.short_description, meta_image: meta.meta_image || row.image, learnings: (meta.learnings_data||[]).map((entry: Record<string,unknown>)=>({id:Number(entry.id),title:String(entry.learning)})), requirements: meta.requirements_data||[],
+    reviews: [], tags: meta.tags||[], language: row.language_name || '',
     instructor: {
       id: Number(row.author_id), name: row.author_name, slug: `learner-${row.author_id}`, email: '',
       avatar: null, about_me: null, qualification: null, skills: null, preview_video: null,
@@ -190,10 +196,10 @@ async function attachPublicCurriculum(course: CourseDetails): Promise<CourseDeta
     id: chapter.id, course_id: course.id, title: chapter.title, slug: String(chapter.id), description: '', is_active: true,
     chapter_order: chapter.position, lecture_count: chapter.lessons.length, lectures_count: chapter.lessons.length,
     duration: chapter.lessons.reduce((sum, lesson) => sum + lesson.duration_seconds, 0), duration_formatted: '',
-    total_content: chapter.lessons.length, quizzes_count: 0, assignments_count: 0,
-    documents_count: chapter.lessons.filter(lesson => ['pdf', 'text'].includes(lesson.type)).length,
+    total_content: chapter.lessons.length, quizzes_count: chapter.lessons.filter(lesson=>lesson.type==='quiz').length, assignments_count: chapter.lessons.filter(lesson=>lesson.type==='assignment').length,
+    documents_count: chapter.lessons.filter(lesson => ['pdf', 'text', 'resource'].includes(lesson.type)).length,
     curriculum: chapter.lessons.map(lesson => ({
-      id: lesson.id, type: ['pdf', 'text'].includes(lesson.type) ? 'document' as const : 'lecture' as const,
+      id: lesson.id, type: lesson.type==='quiz'?'quiz' as const:lesson.type==='assignment'?'assignment' as const:['pdf', 'text', 'resource'].includes(lesson.type) ? 'document' as const : 'lecture' as const,
       title: lesson.title, slug: String(lesson.id), description: null, is_active: true, chapter_order: lesson.position,
       is_completed: false, created_at: '', updated_at: '', free_preview: lesson.is_preview ? 1 : 0,
     })), created_at: '', updated_at: '', locked: !chapter.lessons.some(lesson => lesson.is_preview),

@@ -1,11 +1,5 @@
-import Layout from '@/components/layout/Layout'
-import BecomeInstructor from '@/components/instructor/becomeInstructor/BecomeInstructor'
-import React from 'react'
+import { redirect } from 'next/navigation';
 
-export default function page() {
-  return (
-    <Layout>
-      <BecomeInstructor />
-    </Layout>
-  );
+export default function Page() {
+  redirect('/instructor/dashboard');
 }

@@ -23,7 +23,7 @@ const persistConfig = {
   key: "inner-revealing-mysql-v1",
   version: 1,
   storage,
-  blacklist: ["user"],
+  blacklist: ["user", "language"],
 };
 
 // Discard the previous vendor-backed catalogue, cart, settings and identity.

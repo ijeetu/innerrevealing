@@ -21,6 +21,7 @@ export interface CurriculumResource {
 
 // Interface for curriculum details data structure (matches API response)
 export interface CurriculumDetails {
+  duration_seconds?: number;
   id: number;
   user_id: number;
   course_chapter_id: number;

@@ -35,6 +35,9 @@ export interface InstructorResponse {
 // Interface for Refund Request Data
 export interface RefundRequestData {
     id: number;
+    refund_method?: 'manual'|'razorpay';
+    payment_method?: string;
+    manual_reference?: string;
     status: string;
     refund_amount: string;
     reason: string;

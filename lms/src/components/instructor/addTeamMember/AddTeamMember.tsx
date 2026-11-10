@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import {IncomingTeamInvitations,TeamCourseAccess} from "./TeamAccessControls";
 import {
     Card,
     CardContent,
@@ -216,6 +217,7 @@ export default function TeamMemberPage() {
                 </CardContent>
             </Card>
 
+            <IncomingTeamInvitations />
             {/* Team List Section */}
             {/* Used Shadcn Card component */}
             <Card className="p-0 rounded-2xl">
@@ -351,6 +353,7 @@ export default function TeamMemberPage() {
                                                 {getStatusBadge(member.status)}
                                             </TableCell>
                                             <TableCell className="py-4">
+                                                <TeamCourseAccess member={member} onSaved={()=>fetchTeamMembers()} />
                                                 <button className="inline-flex items-center px-3 py-1 rounded-[4px] text-sm font-medium text-red-500 bg-red-100 w-max" onClick={() => handleRemoveTeamMember(member.user_id, member.user.email)}>
                                                     {t("remove")}
                                                 </button>
@@ -380,7 +383,8 @@ export default function TeamMemberPage() {
 
                                         {/* Three dots menu */}
                                         <div className="absolute top-3 right-3">
-                                            <button className="inline-flex items-center px-3 py-1 rounded-[4px] text-sm font-medium text-red-500 bg-red-100 w-max" onClick={() => handleRemoveTeamMember(member.user_id, member.user.email)}>
+                                            <TeamCourseAccess member={member} onSaved={()=>fetchTeamMembers()} />
+                                                <button className="inline-flex items-center px-3 py-1 rounded-[4px] text-sm font-medium text-red-500 bg-red-100 w-max" onClick={() => handleRemoveTeamMember(member.user_id, member.user.email)}>
                                                 {t("remove")}
                                             </button>
                                         </div>

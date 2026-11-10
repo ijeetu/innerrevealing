@@ -55,6 +55,16 @@ export async function ensureCoursePublishable(courseId: number, connection: SqlC
     if (!lesson.title?.trim()) throw new ApiError(422, 'Each published lesson needs a title.');
     if (lesson.type === 'text') {
       if (!lesson.content?.replace(/<[^>]+>/g, '').trim()) throw new ApiError(422, 'Each published text lesson needs content.');
+    } else if (lesson.type === 'quiz') {
+      const [quizzes] = await connection.execute<RowDataPacket[]>('SELECT q.id FROM ir_quizzes q WHERE q.lesson_id=? AND q.is_published=1 AND EXISTS(SELECT 1 FROM ir_quiz_questions questions WHERE questions.quiz_id=q.id AND questions.is_active=1)', [lesson.id]);
+      if (!quizzes.length) throw new ApiError(422, 'Each published quiz needs at least one complete question.');
+    } else if (lesson.type === 'assignment') {
+      const [assignments] = await connection.execute<RowDataPacket[]>('SELECT id,description,instructions FROM ir_assignments WHERE lesson_id=? AND is_active=1', [lesson.id]);
+      if (!assignments.length || !String(assignments[0].description || assignments[0].instructions).replace(/<[^>]+>/g,'').trim()) throw new ApiError(422, 'Each published assignment needs instructions or a description.');
+    } else if (lesson.type === 'resource') {
+      if (!lesson.media_id && !lesson.external_url) throw new ApiError(422, 'Each published document needs a file or HTTPS source.');
+      if (lesson.media_id && !Number(lesson.byte_size)) throw new ApiError(422, 'This resource file is missing.');
+      if (lesson.external_url) safeHttps(lesson.external_url, 'Document source');
     } else if (lesson.media_id) {
       const expected = lesson.type === 'pdf' ? 'document' : lesson.type;
       if (lesson.media_kind !== expected || !Number(lesson.byte_size) || (lesson.type === 'pdf' && lesson.media_mime !== 'application/pdf')) throw new ApiError(422, 'A lesson media file is missing or does not match its type.');

@@ -33,12 +33,23 @@ function dateString(value: string): string {
 }
 
 export function publicUser(row: UserRow): SessionUser {
+  const isStaff = row.role === 'admin' || row.role === 'superadmin';
+  const created = dateString(row.created_at), updated = dateString(row.updated_at);
   return {
     id: Number(row.id), name: row.name, slug: `learner-${row.id}`, email: row.email,
     mobile: null, country_calling_code: null, country_code: null, country_name: '', type: 'email',
     email_verified_at: null, profile: '', is_active: Number(row.is_active), wallet_balance: null,
     total_balance: null, created_at: dateString(row.created_at), updated_at: dateString(row.updated_at),
-    deleted_at: null, is_instructor: false, instructor_process_status: 'pending', instructor_details: null,
+    deleted_at: null, is_instructor: isStaff, instructor_process_status: isStaff ? 'approved' : 'pending',
+    instructor_details: isStaff ? {
+      id: Number(row.id), user_id: Number(row.id), type: 'individual', status: 'approved', reason: null,
+      created_at: created, updated_at: updated, deleted_at: null, individual_commision_rate: '0', team_commision_rate: '0',
+      personal_details: { id: Number(row.id), instructor_id: Number(row.id), qualification: '', years_of_experience: 0, skills: '',
+        bank_account_number: null, bank_name: null, bank_account_holder_name: null, bank_ifsc_code: null,
+        team_name: null, team_logo: null, team_logo_extension: null, about_me: null, id_proof: '', id_proof_extension: null,
+        preview_video: '', preview_video_extension: null, created_at: created, updated_at: updated, deleted_at: null },
+      social_medias: [], other_details: [],
+    } : null,
     roles: [], role: row.role, token: 'web-session',
   };
 }

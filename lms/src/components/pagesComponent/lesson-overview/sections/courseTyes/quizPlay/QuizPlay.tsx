@@ -27,7 +27,7 @@ const QuizPlay = () => {
     const [selectedOption, setSelectedOption] = useState<number | null>(null);
     const [isFinishingQuiz, setIsFinishingQuiz] = useState<boolean>(false);
     const [score, setScore] = useState<number>(0);
-    const isPassed = selectedCurriculumItem?.is_completed ? true : score >= (selectedCurriculumItem?.passing_score || 0);
+    const isPassed = score >= (selectedCurriculumItem?.passing_score || 0);
     // Get total questions count
     const totalQuestions = selectedCurriculumItem?.questions?.length || 0;
 
@@ -110,6 +110,7 @@ const QuizPlay = () => {
             });
 
             if (response?.error) {
+                if(response.code===409&&/time limit.*expired/i.test(response.message||'')){await handleFinishQuiz();return;}
                 console.log("API error:", response?.message);
                 toast.error(response?.message || "Failed to submit answer");
                 return;
@@ -143,7 +144,7 @@ const QuizPlay = () => {
     }, [isStartingQuiz]);
 
     useEffect(() => {
-        if ((isPassed && isFinishingQuiz) || selectedCurriculumItem?.is_completed) {
+        if (isPassed && isFinishingQuiz) {
             dispatch(setIsCurriculumItemCompleted({ completed: true }));
         }
     }, [isPassed, isFinishingQuiz]);

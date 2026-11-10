@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import WithdrawalProcessing from './WithdrawalProcessing';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { BiSearchAlt } from "react-icons/bi";
@@ -152,6 +153,7 @@ const WithdrawalHistory = () => {
 
             {/* Transaction table */}
             <TransactionTable data={transactionData} isLoading={isLoading} />
+            <WithdrawalProcessing rows={transactionData} onUpdated={()=>fetchWithdrawalHistory()} />
 
             {/* Pagination */}
             {totalPages > 0 && (

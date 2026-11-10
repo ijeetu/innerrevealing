@@ -43,7 +43,7 @@ import { CourseDataType, CourseStatistics, GetAddedCoursesParams } from "@/utils
 import CustomPagination from "@/components/instructor/commonCommponents/pagination/CustomPagination";
 // Import API functions
 import { getAddedCourses } from "@/utils/api/instructor/course/getAddedCourses";
-import { deleteCourseChapterById } from "@/utils/api/instructor/course/delete-update-course/deleteCourse";
+import axiosClient from "@/utils/api/axiosClient";
 import toast from "react-hot-toast";
 import CustomImageTag from "@/components/commonComp/customImage/CustomImageTag";
 import { HiDotsHorizontal } from "react-icons/hi";
@@ -64,9 +64,10 @@ interface CoursesTableProps {
   earningsPage?: boolean;
   teamSlug?: string;
   myCoursesPage?: boolean;
+  onCourseChange?: () => void;
 }
 
-const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myCoursesPage }) => {
+const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myCoursesPage, onCourseChange }) => {
 
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -81,7 +82,9 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
     active: 0,
   });
   const [courses, setCourses] = useState<CourseDataType[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   // Filter and pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -267,50 +270,35 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
 
   const handleOpenDeleteModal = (id: number, status: string) => {
     setCourseToDelete({ id, status });
+    setDeleteError("");
     setIsDeleteModalOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (courseToDelete) {
-      await handleDeleteCourse(courseToDelete.id, courseToDelete.status);
+    if (!courseToDelete || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      const response = await axiosClient.delete(`/admin/courses/${courseToDelete.id}`);
+      if (response.data.error) throw new Error(response.data.message || "Could not delete this course.");
+      toast.success(response.data.message || "Course deleted successfully.");
       setIsDeleteModalOpen(false);
       setCourseToDelete(null);
+      await fetchAddedCourses();
+      onCourseChange?.();
+    } catch (failure) {
+      const result = failure as { response?: { data?: { message?: string } }; message?: string };
+      setDeleteError(result.response?.data?.message || result.message || "Could not delete this course.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleDeleteCourse = async (id: number, status: string) => {
-    try {
-      // Call the delete course API
-      const response = await deleteCourseChapterById(id, id);
-
-      if (response.success) {
-        toast.success("Course deleted successfully!");
-        setCourses(courses.filter((course) => course?.id !== id));
-        switch (status) {
-          case "publish":
-            setStatistics?.({ ...statistics, publish: statistics?.publish - 1 });
-            break;
-          case "pending":
-            setStatistics?.({ ...statistics, pending: statistics?.pending - 1 });
-            break;
-          case "rejected":
-            setStatistics?.({ ...statistics, rejected: statistics?.rejected - 1 });
-            break;
-          case "draft":
-            setStatistics?.({ ...statistics, draft: statistics?.draft - 1 });
-            break;
-          default:
-            break;
-        }
-      } else {
-        toast.error(response.error || "Failed to delete course");
-        console.error("Course deletion failed:", response);
-      }
-    } catch (error) {
-      console.error("Error deleting course:", error);
-      toast.error("An unexpected error occurred while deleting the course");
-    }
+  const handleSearchSubmit = () => {
+    setCurrentPage(1);
+    void fetchAddedCourses({ search: searchTerm.trim(), page: 1 });
   };
+  const courseStatusLabel = (status: string) => status === "archived" ? "Archived" : getStatus(status);
 
 
   const tableHeaderPoints = [
@@ -497,6 +485,7 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
                           <SelectItem value="pending">{t("pending")}</SelectItem>
                           <SelectItem value="rejected">{t("rejected")}</SelectItem>
                           <SelectItem value="draft">{t("draft")}</SelectItem>
+                          <SelectItem value="archived">Archived</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -508,10 +497,12 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
                     placeholder={t("search_for_course")}
                     value={searchTerm}
                     onChange={handleSearchInputChange}
+                    onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handleSearchSubmit(); } }}
                     className="border-0 rounded-none shadow-none focus-visible:ring-0 sectionBg w-full md:min-w-[200px] lg:min-w-[300px] h-full py-0"
                   />
                   <Button
-                    type="submit"
+                    type="button"
+                    onClick={handleSearchSubmit}
                     variant="default"
                     className="rounded-none bg-black text-white hover:bg-black/90 h-full px-4 flex items-center gap-2 shadow-none flex-shrink-0 py-0"
                   >
@@ -599,7 +590,7 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
                         </TableCell>
                       }
                       <TableCell className="text-start">
-                        {course?.price === '0' || course?.price === null ? (
+                        {Number(course?.price || 0) === 0 ? (
                           <div className="font-medium text-green-600">
                             {t("free")}
                           </div>
@@ -651,7 +642,7 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
                               }
                          px-2 py-1 text-sm rounded-[5px] w-full font-medium`}
                           >
-                            {getStatus(course?.status)}
+                            {courseStatusLabel(course?.status)}
                           </Badge>
                         </TableCell>
                       }
@@ -839,7 +830,7 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
                         <div className="flex justify-between items-center border-b borderColor pb-2">
                           <span className="font-semibold">{t("price")}:</span>
                           <div className="flex gap-2 w-1/2 flex-col">
-                            {course?.price === '0' || course?.price === null ? (
+                            {Number(course?.price || 0) === 0 ? (
                               <span className="font-medium text-green-600">{t("free")}</span>
                             ) : (
                               <>
@@ -900,7 +891,7 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
                                         : "bg-[#0000001F] text-[#000000]"
                                   } px-3 py-1 text-sm rounded-full font-medium`}
                               >
-                                {getStatus(course?.status)}
+                                {courseStatusLabel(course?.status)}
                               </Badge>
                             </div>
                           </div>
@@ -949,8 +940,10 @@ const CoursesTable: React.FC<CoursesTableProps> = ({ earningsPage, teamSlug, myC
 
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
-        onOpenChange={() => setIsDeleteModalOpen(true)}
-        onClose={() => setIsDeleteModalOpen(false)}
+        onOpenChange={(open) => { if (!isDeleting) setIsDeleteModalOpen(open); }}
+        onClose={() => { if (!isDeleting) setIsDeleteModalOpen(false); }}
+        isPending={isDeleting}
+        error={deleteError}
         onConfirm={handleDeleteConfirm}
       />
     </>

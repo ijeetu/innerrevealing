@@ -3,7 +3,7 @@ import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { hashPassword } from './passwords';
 
 export async function removeUserData(connection: PoolConnection, userId: number): Promise<{ deleted: true; anonymized: boolean }> {
-  const [references] = await connection.execute<RowDataPacket[]>('SELECT (SELECT COUNT(*) FROM ir_orders WHERE user_id = ?) + (SELECT COUNT(*) FROM ir_courses WHERE instructor_id = ?) AS total', [userId,userId]);
+  const [references] = await connection.execute<RowDataPacket[]>('SELECT (SELECT COUNT(*) FROM ir_orders WHERE user_id = ?) + (SELECT COUNT(*) FROM ir_courses WHERE instructor_id = ?) + (SELECT COUNT(*) FROM ir_coupons WHERE created_by=?) + (SELECT COUNT(*) FROM ir_withdrawals WHERE user_id=?) + (SELECT COUNT(*) FROM ir_refund_requests WHERE user_id=?) + (SELECT COUNT(*) FROM ir_coupon_redemptions WHERE user_id=?) AS total', [userId,userId,userId,userId,userId,userId]);
   if (!Number(references[0].total)) {
     await connection.execute('DELETE FROM ir_users WHERE id = ?', [userId]);
     return { deleted: true, anonymized: false };

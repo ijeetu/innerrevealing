@@ -48,8 +48,9 @@ export type GetCategoriesResponse = ApiResponse<Category[]>;
  */
 export const getCategories = async (): Promise<GetCategoriesResponse | null> => {
   try {
-    const response = await axiosClient.get<GetCategoriesResponse>(getCategoriesApiRoute);
-    return response.data;
+    const response = await axiosClient.get<ApiResponse<Category[] | { data: Category[] }>>(getCategoriesApiRoute);
+    const payload = response.data;
+    return { ...payload, data: Array.isArray(payload.data) ? payload.data : payload.data?.data || [] };
   } catch (error) {
     const axiosError = error as { response?: { data?: GetCategoriesResponse } };
     console.log("Error in getCategories:", axiosError?.response?.data);

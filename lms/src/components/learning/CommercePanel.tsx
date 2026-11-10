@@ -6,12 +6,15 @@ import { useSelector } from 'react-redux';
 import AccountPanel from '@/components/profile/AccountPanel';
 import { isLoginSelector } from '@/redux/reducers/userSlice';
 import { webRequest } from '@/utils/webApi';
+import {settingsSelector} from '@/redux/reducers/settingsSlice';
+import RefundRequestModal from '@/components/profile/tabsPagesContent/RefundRequestModal';
+import type {OrderCourse} from '@/utils/api/user/getOrders';
 
 interface CartItem { id: number; slug: string; title: string; image: string; price: number }
-interface Cart { items: CartItem[]; total: number; currency: string }
+interface Cart { items: CartItem[]; total: number; subtotal: number; discount_amount: number; coupon_code: string; coupon_error?: string; currency: string }
 interface PaymentConfig { methods: string[]; manual_instructions: string; upi_id: string; bank_account_name: string; bank_account_number: string; bank_ifsc: string; razorpay_key_id?: string }
-interface OrderItem { course_id: number; slug: string; title: string; amount: number }
-interface Order { id: number; order_number: string; amount: number; currency: string; status: string; payment_method: string; payment_reference?: string; notes?: string; created_at: string; items: OrderItem[] }
+interface OrderItem { course_id: number; slug: string; title: string; amount: number; creator_name?:string; image?:string; original_amount?:number }
+interface Order { coupon_code?:string;discount_amount?:number;subtotal?:number;id: number; order_number: string; amount: number; currency: string; status: string; payment_method: string; payment_reference?: string; notes?: string; created_at: string; items: OrderItem[] }
 interface Checkout { key_id: string; order_id: string; amount: number; currency: string }
 interface RazorpayResult { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }
 interface RazorpayPopup { open(): void; on(event: string, handler: (result: { error?: { description?: string } }) => void): void }
@@ -37,9 +40,10 @@ export function CartPanel() {
   const [cart, setCart] = useState<Cart | null>(null);
   const [config, setConfig] = useState<PaymentConfig | null>(null);
   const [method, setMethod] = useState('manual');
+  const [couponCode,setCouponCode]=useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const refresh = async () => { const [items, payments] = await Promise.all([webRequest<Cart>('/api/commerce/cart'), webRequest<PaymentConfig>('/api/commerce/config')]); setCart(items); setConfig(payments); setMethod(current => payments.methods.includes(current) ? current : payments.methods[0] || 'manual'); };
+  const refresh = async () => { const [items, payments] = await Promise.all([webRequest<Cart>('/api/commerce/cart'), webRequest<PaymentConfig>('/api/commerce/config')]); setCart(items); setCouponCode(items.coupon_code||''); setConfig(payments); setMethod(current => payments.methods.includes(current) ? current : payments.methods[0] || 'manual'); };
   useEffect(() => { if (loggedIn) void refresh().catch(error => setError(error.message)); }, [loggedIn]);
   const remove = async (id: number) => {
     setBusy(true); setError('');
@@ -47,10 +51,11 @@ export function CartPanel() {
     catch (error) { setError(error instanceof Error ? error.message : 'Could not update your cart.'); }
     finally { setBusy(false); }
   };
+  const applyCoupon=async(remove=false)=>{setBusy(true);setError('');try{await webRequest(remove?'/api/cart/remove-promo':'/api/cart/apply-promo',{method:'POST',body:remove?{}:{promo_code:couponCode}});await refresh();}catch(error){setError(error instanceof Error?error.message:'Could not apply this coupon.');}finally{setBusy(false);}};
   const checkout = async () => {
     setBusy(true); setError('');
     try {
-      const result = await webRequest<{ order: Order; checkout?: Checkout }>('/api/commerce/orders', { method: 'POST', body: { payment_method: cart?.total === 0 ? 'free' : method } });
+      const result = await webRequest<{ order: Order; checkout?: Checkout }>('/api/commerce/orders', { method: 'POST', body: { payment_method: cart?.total === 0 ? 'free' : method, coupon_code:cart?.coupon_code||'' } });
       if (!result.checkout) { router.push(`/transaction-history?order=${result.order.id}`); return; }
       const Razorpay = await razorpayScript();
       let confirming = false;
@@ -74,7 +79,7 @@ export function CartPanel() {
     {error && <p role="alert" className="text-red-700 mb-5">{error}</p>}
     {!cart ? <p role="status">Loading your cart…</p> : !cart.items.length ? <div className="text-center py-12 space-y-4"><h2 className="text-xl font-semibold">Your cart is empty</h2><Link href="/courses" className="commonBtn inline-flex">Explore practices</Link></div> : <div className="space-y-7">
       <ul className="divide-y">{cart.items.map(item => <li key={item.id} className="py-5 flex items-center gap-4">{item.image && <img src={item.image} alt="" className="w-20 h-20 rounded-xl object-cover" />}<div className="flex-1 space-y-1"><Link className="font-semibold" href={`/course-details/${item.slug}`}>{item.title}</Link><p>{money(item.price, cart.currency)}</p></div><button className="text-sm underline" onClick={() => remove(item.id)} disabled={busy}>Remove</button></li>)}</ul>
-      <div className="flex justify-between text-xl font-semibold"><span>Total</span><span>{money(cart.total, cart.currency)}</span></div>
+      <div className="space-y-3 rounded-xl border borderColor p-4"><label className="block text-sm font-medium" htmlFor="checkout-coupon">Coupon code</label><div className="flex gap-3"><input id="checkout-coupon" value={couponCode} onChange={event=>setCouponCode(event.target.value.toUpperCase())} maxLength={40} className="min-w-0 flex-1 border borderColor rounded-lg p-3" /><button disabled={busy||!couponCode.trim()} onClick={()=>applyCoupon()} className="primaryColor font-medium">Apply</button>{cart.coupon_code&&<button disabled={busy} onClick={()=>applyCoupon(true)} className="text-sm underline">Remove</button>}</div>{cart.coupon_error&&<p className="text-sm text-red-700">{cart.coupon_error}</p>}{cart.discount_amount>0&&<p className="text-sm primaryColor">Coupon {cart.coupon_code}: −{money(cart.discount_amount,cart.currency)}</p>}</div><div className="flex justify-between text-xl font-semibold"><span>Total</span><span>{money(cart.total, cart.currency)}</span></div>
       {cart.total > 0 && <fieldset className="space-y-3"><legend className="font-semibold mb-3">How would you like to pay?</legend>{config?.methods.map(value => <label key={value} className="flex items-center gap-3 border borderColor rounded-xl p-4"><input type="radio" name="payment-method" value={value} checked={method === value} onChange={() => setMethod(value)} /><span>{value === 'razorpay' ? 'Secure online payment' : 'Bank transfer / UPI · confirmed by our team'}</span></label>)}</fieldset>}
       {cart.total > 0 && config?.methods.length === 0 ? <p>Payments are being configured. Please <Link href="/contact-us" className="primaryColor underline">contact our team</Link> to join.</p> : <button className="commonBtn disabled:opacity-50" onClick={checkout} disabled={busy || !config}>{busy ? 'Please wait…' : cart.total === 0 ? 'Join these free courses' : method === 'manual' ? 'Create order & see payment details' : 'Continue to secure payment'}</button>}
       <p className="text-sm text-gray-500">Course access begins after your payment is confirmed. Free courses are available immediately.</p>
@@ -83,10 +88,14 @@ export function CartPanel() {
 }
 
 export function OrdersPanel() {
+  const policy=useSelector(settingsSelector).data;
+  const [refunds,setRefunds]=useState<{id:number;course_id:number;order_id:number;status:string;reason:string}[]>([]);
+  const [refundCourse,setRefundCourse]=useState<OrderCourse|null>(null);
+  const [refundOpen,setRefundOpen]=useState(false);
   const loggedIn = useSelector(isLoginSelector);
   const params = useSearchParams();
   const router = useRouter();
-  const selected = Number(params.get('order')) || 0;
+  const selected = Number(params.get('order')||params.get('order_id')) || 0;
   const [orders, setOrders] = useState<Order[]>([]);
   const [detail, setDetail] = useState<{ order: Order; config: PaymentConfig } | null>(null);
   const [reference, setReference] = useState('');
@@ -96,6 +105,7 @@ export function OrdersPanel() {
   const [busy, setBusy] = useState(false);
   const refresh = async () => {
     const list = await webRequest<{ orders: Order[] }>('/api/commerce/orders'); setOrders(list.orders);
+    const refundList=await webRequest<{data:{id:number;course_id:number;order_id:number;status:string;reason:string}[]}>('/api/refund/my-refunds?per_page=50');setRefunds(refundList.data);
     if (selected) { const data = await webRequest<{ order: Order; config: PaymentConfig }>(`/api/commerce/orders/${selected}`); setDetail(data); setReference(data.order.payment_reference || ''); setNotes(data.order.notes || ''); }
     else setDetail(null);
   };
@@ -107,12 +117,16 @@ export function OrdersPanel() {
     finally { setBusy(false); }
   };
   const order = detail?.order;
+  const withinRefundPeriod=!!order&&(Number(policy.refund_period_days)<=0||Date.now()-new Date(order.created_at.includes('T')?order.created_at:order.created_at.replace(' ','T')+'Z').getTime()<=Number(policy.refund_period_days)*86400000);
+  const requestRefund=(item:OrderItem)=>{const original=Number(item.original_amount??item.amount);setRefundCourse({course_id:item.course_id,title:item.title,image:item.image||'',original_price:original,price:original,price_without_tax:item.amount,discount_amount:original-item.amount,tax_price:0,final_price:item.amount,price_with_tax:item.amount,course_current_price:original,course_type:item.amount?'paid':'free',creator_name:item.creator_name||'',refund_enabled:true,refund_period_days:Number(policy.refund_period_days),is_refund_eligible:true,refund_days_remaining:0,has_refund_request:false,refund_request_status:null,refund_request_id:null,refund_admin_notes:null,purchase_date:order?.created_at||''});setRefundOpen(true);};
   return <AccountPanel title="Your purchases" description="Track course orders and see when your access is ready.">
     {error && <p role="alert" className="text-red-700 mb-5">{error}</p>}
     {loading ? <p role="status">Loading your orders…</p> : detail && order ? <div className="space-y-6">
       <button className="primaryColor" onClick={() => router.push('/transaction-history')}>← All orders</button>
       <div className="flex flex-wrap justify-between gap-4"><div><h2 className="text-2xl font-semibold">{order.order_number}</h2><p className="text-sm text-gray-500 mt-2">{new Date(order.created_at).toLocaleDateString('en-IN')} · {order.payment_method}</p></div><div className="text-right"><p className="text-xl font-semibold">{money(order.amount, order.currency)}</p><p className="capitalize primaryColor text-sm mt-2">{order.status.replace(/_/g, ' ')}</p></div></div>
-      <ul className="divide-y">{order.items.map(item => <li key={item.course_id} className="py-4 flex justify-between items-center gap-4"><Link href={`/course-details/${item.slug}`} className="font-medium">{item.title}</Link>{order.status === 'paid' ? <Link href={`/learn/${item.slug}`} className="primaryColor whitespace-nowrap">Start learning →</Link> : <span>{money(item.amount, order.currency)}</span>}</li>)}</ul>
+      {Number(order.discount_amount)>0&&<p className="text-sm primaryColor">Coupon {order.coupon_code}: −{money(Number(order.discount_amount),order.currency)}</p>}
+      <ul className="divide-y">{order.items.map(item => {const refund=refunds.find(row=>Number(row.course_id)===item.course_id&&Number(row.order_id)===order.id);return <li key={item.course_id} className="py-4 flex justify-between items-center gap-4 flex-wrap"><Link href={`/course-details/${item.slug}`} className="font-medium">{item.title}</Link><div className="flex items-center gap-4 flex-wrap">{order.status === 'paid' ? <Link href={`/learn/${item.slug}`} className="primaryColor whitespace-nowrap">Start learning →</Link> : <span>{money(item.amount, order.currency)}</span>}{refund?<span className="text-sm capitalize text-gray-600">Refund {refund.status}</span>:order.status==='paid'&&item.amount>0&&String(policy.refund_enabled)==='1'&&withinRefundPeriod&&<button className="text-sm underline primaryColor" onClick={()=>requestRefund(item)}>Request refund</button>}</div></li>})}</ul>
+      <RefundRequestModal open={refundOpen} setOpen={setRefundOpen} selectedCourse={refundCourse} orderId={order.id} onSuccess={()=>{void refresh().catch(error=>setError(error.message));}}/>
       {order.status === 'paid' && <p className="rounded-2xl primaryLightBg p-5 primaryColor">Your access is ready. You can also find these courses in <Link className="underline" href="/my-learnings">My learning</Link>.</p>}
       {order.payment_method === 'manual' && !['paid', 'cancelled', 'refunded'].includes(order.status) && <section className="rounded-2xl border borderColor p-5 md:p-7 space-y-5">
         <h3 className="text-xl font-semibold">Payment instructions</h3><p className="whitespace-pre-wrap leading-7">{detail.config.manual_instructions || 'Contact Inner Revealing for payment instructions before sending a payment.'}</p>

@@ -3,6 +3,7 @@ import { persistor, store } from './index';
 import { Provider } from 'react-redux';
 import { useEffect } from 'react';
 import { logoutSuccess, setToken, setUserData } from '../reducers/userSlice';
+import { resetLanguageState } from '../reducers/languageSlice';
 import type { UserDetails } from '@/utils/api/user/getUserDetails';
 
 export function StoreProvider({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -26,6 +27,7 @@ export function StoreProvider({ children }: Readonly<{ children: React.ReactNode
     const restoreSession = async () => {
       if (started || !persistor.getState().bootstrapped) return;
       started = true;
+      store.dispatch(resetLanguageState());
       const tokenAtStart = store.getState().user.token;
       try {
         const response = await fetch('/api/auth/session', { credentials: 'include', cache: 'no-store' });

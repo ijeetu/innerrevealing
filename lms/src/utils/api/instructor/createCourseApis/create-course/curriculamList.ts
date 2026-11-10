@@ -19,6 +19,8 @@ export interface CurriculumResource {
 
 // Interface for curriculum all details structure
 export interface CurriculumAllDetails {
+  lesson_id?: number;
+  duration_seconds?: number;
   id: number;
   user_id: number;
   course_chapter_id: number;
@@ -46,6 +48,7 @@ export interface CurriculumAllDetails {
 
 // Interface for curriculum row data structure
 export interface CurriculumRow {
+  lesson_id?: number;
   no: number;
   id: number;
   title: string;

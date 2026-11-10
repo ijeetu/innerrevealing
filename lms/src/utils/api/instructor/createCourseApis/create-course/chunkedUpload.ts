@@ -1,261 +1,37 @@
-import axiosClient from "../../../axiosClient";
-import { curriculumLectureUploadApiRoute } from '@/utils/apiRoutes';
-
-
-
+import axiosClient from '../../../axiosClient';
 
 export type ChunkUploadProgressCallback = (progress: ChunkUploadProgress) => void;
-
 export interface ChunkUploadProgress {
-  uploadedChunks: number;
-  totalChunks: number;
-  percentage: number;
-  bytesUploaded: number;
-  totalBytes: number;
-  status: 'preparing' | 'uploading' | 'completed' | 'error' | 'cancelled';
-  currentChunkIndex: number;
+  uploadedChunks: number; totalChunks: number; percentage: number; bytesUploaded: number;
+  totalBytes: number; status: 'preparing' | 'uploading' | 'completed' | 'error' | 'cancelled'; currentChunkIndex: number;
 }
+export interface ChunkedUploadResult { success: boolean; cancelled?: boolean; videoName?: string; error?: string; data?: Record<string, unknown>; }
+export const MAX_LECTURE_BYTES = 50 * 1024 * 1024;
 
-export interface ChunkedUploadResult {
-  success: boolean;
-  cancelled?: boolean;
-  videoName?: string;
-  error?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data?: Record<string, any>;
-}
-
-
-
-const MAX_RETRIES = 3;
-
-const RETRY_DELAY_MS = 2000;
-
-
-interface FileChunk {
-  blob: Blob;
-
-  chunkNumber: number;
-  start: number;
-  end: number;
-}
-
-let CHUNK_SIZE = 100 * 1024 * 1024;
-
-
-const splitFileIntoChunks = (file: File, maxChunkSize?: number): FileChunk[] => {
-
-  // CHUNK_SIZE = maxChunkSize ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-
-  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  const chunks: FileChunk[] = [];
-
-  for (let i = 0; i < totalChunks; i++) {
-    const start = i * CHUNK_SIZE;
-    const end = Math.min(start + CHUNK_SIZE, file.size);
-    chunks.push({
-      blob: file.slice(start, end),
-      chunkNumber: i + 1,
-      start,
-      end,
-    });
-
-  }
-
-  return chunks;
-};
-
-
-const generateResumableIdentifier = (file: File): string => {
-  const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return `${file.size}-${sanitized}-${Date.now()}`;
-};
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-const isCancelledError = (error: unknown): boolean => {
-  if (!error || typeof error !== 'object') return false;
-  const e = error as Record<string, unknown>;
-  return e['name'] === 'AbortError' || e['code'] === 'ERR_CANCELED' || e['__CANCEL__'] === true;
-};
-
-const uploadSingleChunk = async (
-  chunk: FileChunk,
-  fileName: string,
-  resumableIdentifier: string,
-  totalChunks: number,
-  retries = MAX_RETRIES,
-  signal?: AbortSignal,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<{ success: boolean; cancelled?: boolean; data?: any }> => {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    if (signal?.aborted) return { success: false, cancelled: true };
-
-    try {
-      const formData = new FormData();
-      formData.append("resumableChunkNumber", chunk.chunkNumber.toString());
-      formData.append("resumableTotalChunks", totalChunks.toString());
-      formData.append("resumableIdentifier", resumableIdentifier);
-      formData.append("resumableFilename", fileName);
-      formData.append("file", chunk.blob, fileName);
-
-      const response = await axiosClient.post(curriculumLectureUploadApiRoute, formData, {
-        timeout: 600000,
-        signal,
-      });
-      if (response.data && !response.data.error) {
-        return { success: true, data: response.data };
-      }
-    } catch (error) {
-      if (isCancelledError(error)) return { success: false, cancelled: true };
-      console.error(
-        `[ChunkedUpload] ❌ Chunk ${chunk.chunkNumber}/${totalChunks} upload error (attempt ${attempt}/${retries}):`,
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-
-    if (attempt < retries) {
-      const waitMs = RETRY_DELAY_MS * attempt;
-      console.log(`[ChunkedUpload] Retrying chunk ${chunk.chunkNumber} in ${waitMs}ms...`);
-      await delay(waitMs);
-    }
-  }
-
-  return { success: false };
-};
-
-
-export const shouldUseChunkedUpload = (file: File): boolean => {
-  return file.size > CHUNK_SIZE;
-};
-
-export const uploadFileInChunks = async (
-  file: File,
-  onProgress?: ChunkUploadProgressCallback,
-  maxChunkSize?: number,
-  signal?: AbortSignal,
-): Promise<ChunkedUploadResult> => {
+// Keep the supplied progress component's contract while uploading to protected
+// local media storage. No browser path or filename is accepted as a media token.
+export const shouldUseChunkedUpload = (_file: File): boolean => false;
+export async function uploadFileInChunks(file: File, onProgress?: ChunkUploadProgressCallback, _maxChunkSize?: number, signal?: AbortSignal): Promise<ChunkedUploadResult> {
+  let bytesUploaded = 0;
+  const progress = (status: ChunkUploadProgress['status'], percentage = 0) => onProgress?.({ uploadedChunks: status === 'completed' ? 1 : 0, totalChunks: 1, percentage, bytesUploaded, totalBytes: file.size, status, currentChunkIndex: 1 });
+  if (signal?.aborted) return { success: false, cancelled: true };
+  if (file.size > MAX_LECTURE_BYTES) return { success: false, error: 'Please choose a lecture file of 50 MB or smaller.' };
+  if (!file.size) return { success: false, error: 'The selected file is empty. Please choose another file.' };
+  progress('preparing');
   try {
-
-    const chunks = splitFileIntoChunks(file, maxChunkSize);
-    const totalChunks = chunks.length;
-    const resumableIdentifier = generateResumableIdentifier(file);
-
-
-    onProgress?.({
-      uploadedChunks: 0,
-      totalChunks,
-      percentage: 0,
-      bytesUploaded: 0,
-      totalBytes: file.size,
-      status: 'preparing',
-      currentChunkIndex: 0,
-    });
-
-
-    let bytesUploaded = 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let lastResponseData: any = null;
-
-    for (let i = 0; i < totalChunks; i++) {
-      if (signal?.aborted) {
-        onProgress?.({ uploadedChunks: i, totalChunks, percentage: Math.round((i / totalChunks) * 100), bytesUploaded, totalBytes: file.size, status: 'cancelled', currentChunkIndex: i });
-        return { success: false, cancelled: true };
-      }
-
-      const chunk = chunks[i];
-
-      onProgress?.({
-        uploadedChunks: i,
-        totalChunks,
-        percentage: Math.round((i / totalChunks) * 100),
-        bytesUploaded,
-        totalBytes: file.size,
-        status: 'uploading',
-        currentChunkIndex: chunk.chunkNumber,
-      });
-
-      const result = await uploadSingleChunk(chunk, file.name, resumableIdentifier, totalChunks, MAX_RETRIES, signal);
-
-      if (result.cancelled) {
-        onProgress?.({ uploadedChunks: i, totalChunks, percentage: Math.round((i / totalChunks) * 100), bytesUploaded, totalBytes: file.size, status: 'cancelled', currentChunkIndex: chunk.chunkNumber });
-        return { success: false, cancelled: true };
-      }
-
-      if (!result.success) {
-        onProgress?.({
-          uploadedChunks: i,
-          totalChunks,
-          percentage: Math.round((i / totalChunks) * 100),
-          bytesUploaded,
-          totalBytes: file.size,
-          status: 'error',
-          currentChunkIndex: chunk.chunkNumber,
-        });
-
-        return {
-          success: false,
-          error: `Failed to upload chunk ${chunk.chunkNumber}/${totalChunks} after ${MAX_RETRIES} retries`,
-        };
-      }
-
-      bytesUploaded += chunk.blob.size;
-      lastResponseData = result.data;
-    }
-
-
-    const videoName =
-      lastResponseData?.data?.video_name ||
-      lastResponseData?.data?.file_name ||
-      lastResponseData?.data?.filename ||
-      lastResponseData?.video_name ||
-      lastResponseData?.file_name ||
-      lastResponseData?.filename ||
-      null;
-
-
-    onProgress?.({
-      uploadedChunks: totalChunks,
-      totalChunks,
-      percentage: 100,
-      bytesUploaded: file.size,
-      totalBytes: file.size,
-      status: 'completed',
-      currentChunkIndex: totalChunks,
-    });
-
-    if (videoName) {
-      return {
-        success: true,
-        videoName,
-        data: lastResponseData?.data || lastResponseData,
-      };
-    }
-
-
-    return {
-      success: true,
-      videoName: undefined,
-      data: lastResponseData?.data || lastResponseData,
-    };
-  } catch (error) {
-    console.error("Chunked upload error:", error);
-
-    onProgress?.({
-      uploadedChunks: 0,
-      totalChunks: 0,
-      percentage: 0,
-      bytesUploaded: 0,
-      totalBytes: file.size,
-      status: 'error',
-      currentChunkIndex: 0,
-    });
-
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Chunked upload failed",
-    };
+    const form = new FormData(); form.append('file', file); form.append('purpose', 'course');
+    const response = await axiosClient.post('/admin/media', form, { timeout: 600000, signal, onUploadProgress(event) {
+      bytesUploaded = Math.min(event.loaded, file.size);
+      progress('uploading', Math.min(99, Math.round(bytesUploaded / file.size * 100)));
+    } });
+    if (response.data.error || !Number.isSafeInteger(Number(response.data.data?.id)) || Number(response.data.data.id) < 1) throw new Error(response.data.message || 'The file could not be saved. Please try again.');
+    bytesUploaded = file.size;
+    progress('completed', 100);
+    return { success: true, videoName: `media:${Number(response.data.data.id)}`, data: response.data.data };
+  } catch (failure) {
+    const error = failure as { name?: string; code?: string; response?: { data?: { message?: string } }; message?: string };
+    if (signal?.aborted || error.code === 'ERR_CANCELED' || error.name === 'AbortError') { progress('cancelled'); return { success: false, cancelled: true }; }
+    progress('error');
+    return { success: false, error: error.response?.data?.message || error.message || 'The upload failed. Please try again.' };
   }
-};
-
-
+}

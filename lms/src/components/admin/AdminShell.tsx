@@ -32,8 +32,9 @@ import { Loading, Notice } from "./ui";
 const AdminContext = createContext<{ user: AdminUser | null }>({ user: null });
 export const useAdmin = () => useContext(AdminContext);
 const links = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/courses", label: "Courses", icon: BookOpen },
+  { href: "/instructor/dashboard", label: "LMS dashboard", icon: BookOpen },
+  { href: "/admin", label: "Administration overview", icon: LayoutDashboard },
+  { href: "/instructor/my-course", label: "My courses", icon: BookOpen },
   { href: "/admin/users", label: "People", icon: Users },
   { href: "/admin/enrollments", label: "Enrollments", icon: GraduationCap },
   { href: "/admin/orders", label: "Orders & payments", icon: Receipt },
@@ -73,7 +74,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           !current ||
           !["admin", "superadmin"].includes(current.role)
         ) {
-          router.replace("/admin/login");
+          router.replace(`/admin/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
           return;
         }
         setUser(current);
@@ -185,7 +186,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                   try {
                     await logoutLocalSession();
                     dispatch(logoutSuccess());
-                    router.replace("/admin/login");
+                    router.replace(`/admin/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
                   } catch (failure) {
                     setError(errorMessage(failure));
                   } finally {

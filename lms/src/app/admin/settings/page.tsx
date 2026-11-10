@@ -15,9 +15,12 @@ import {
   useAdminResource,
 } from "@/components/admin/ui";
 import { setSettings } from "@/redux/reducers/settingsSlice";
+import {useAdmin} from "@/components/admin/AdminShell";
 import type { WebSettings } from "@/utils/api/general/getSettings";
 type Settings = WebSettings & { [key: string]: unknown };
 export default function AdminSettings() {
+  const {user}=useAdmin();
+  const isOwner=user?.role==='superadmin';
   const resource = useAdminResource<Settings>("settings");
   const [form, setForm] = useState<Settings | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,9 +40,11 @@ export default function AdminSettings() {
     setError("");
     setSuccess("");
     try {
+      const body:Record<string,unknown>={...form};
+      if(!isOwner){delete body.refund_enabled;delete body.refund_period_days;}
       const result = await adminApi<Settings>("settings", {
         method: "PATCH",
-        body: form,
+        body,
       });
       setForm({ ...form, ...result.data });
       dispatch(setSettings({ ...form, ...result.data }));
@@ -116,6 +121,13 @@ export default function AdminSettings() {
                   >
                     <input value={String(form.website_url || "")} readOnly />
                   </Field>
+                </div>
+              </Panel>
+              <Panel title="Refund policy" description="Configure the actual policy offered to learners. Only the centre owner can change these controls.">
+                <div className="adm-form-stack">
+                  <label className="adm-check"><input type="checkbox" disabled={!isOwner} checked={String(form.refund_enabled)==='1'} onChange={event=>set('refund_enabled',event.target.checked?'1':'0')}/>Allow learners to request refunds for paid courses</label>
+                  <Field label="Request period (days)" hint="Counted from purchase. Set 0 for no automatic time limit."><input type="number" min={0} max={3650} disabled={!isOwner} value={String(form.refund_period_days||'0')} onChange={event=>set('refund_period_days',event.target.value)} required/></Field>
+                  <p className="adm-section-note">Approval records a recommendation. A refund is complete only after the owner records the actual bank transfer or the gateway confirms it.</p>
                 </div>
               </Panel>
               <Panel title="Website copy">

@@ -47,6 +47,10 @@ export async function settingsAdmin(method: string, body: Record<string, unknown
       }
     } else if (key === 'website_copyright') values[key] = safeContent(value,'Copyright',5000);
     else if (key === 'maintaince_mode') values[key] = booleanValue(value) ? '1' : '0';
+    else if (key === 'refund_enabled' || key === 'refund_period_days') {
+      if(actor.role!=='superadmin')throw new ApiError(403,'Only the centre owner can change refund policy.');
+      values[key]=key==='refund_enabled'?(booleanValue(value)?'1':'0'):String(integerValue(value,'Refund period',0,3650));
+    }
     else if (key === 'currency_code') {
       if (typeof value !== 'string' || !/^[A-Z]{3}$/.test(value)) throw new ApiError(422,'Use a three-letter currency code.');
       values[key] = value;

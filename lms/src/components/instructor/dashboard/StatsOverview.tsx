@@ -16,27 +16,28 @@ const StatsOverview: React.FC<{ data: OverviewStats }> = ({ data }) => {
   const statsData = [
     {
       title: t("total_courses"),
-      value: data?.total_courses.value,
+      value: data?.total_courses?.value ?? "—",
       icon: icon1,
     },
     {
       title: t("enrolled_students"),
-      value: data?.enrolled_students.value,
+      value: data?.enrolled_students?.value ?? "—",
       icon: icon2,
     },
     {
       title: t("courses_sold"),
-      value: data?.courses_sold.value,
+      value: data?.courses_sold?.value ?? "—",
       icon: icon3,
     },
     {
       title: t("total_earnings"),
-      value: data?.total_earnings.value,
+      value: data?.total_earnings?.value ?? "—",
+      isCurrency: true,
       icon: icon4,
     },
     {
       title: t("positive_feedback"),
-      value: data?.positive_feedback.value,
+      value: data?.positive_feedback?.value ?? "—",
       icon: icon5,
     },
   ];
@@ -54,6 +55,7 @@ const StatsOverview: React.FC<{ data: OverviewStats }> = ({ data }) => {
               title={stat.title}
               value={stat.value}
               icon={stat.icon}
+              isCurrency={stat.isCurrency}
             />
           ))}
         </div>

@@ -5,6 +5,7 @@ import { ApiError } from './errors';
 import { safeContent } from './admin/core';
 import { getCourseCurriculum, getPublishedCourseBySlug } from './catalogue';
 import type { CourseOverviewData, LearningCourse, LessonData, LibraryItem } from '@/types/learning';
+import { assertLessonSequence,sequentialEnabled } from './lesson-access';
 
 export function positiveId(value: unknown): number {
   const text = String(value ?? '');
@@ -41,7 +42,7 @@ export async function courseOverview(request: Request, slug: string): Promise<Co
       completed = progress.map(row => Number(row.lesson_id));
     }
   }
-  return { course, chapters, enrolled, saved, can_manage: !!user && ['admin', 'superadmin'].includes(user.role), completed_lesson_ids: completed };
+  return { course, chapters, enrolled, saved, can_manage: !!user && ['admin', 'superadmin'].includes(user.role), completed_lesson_ids: completed,sequential_access:await sequentialEnabled(course.id) };
 }
 
 export async function getLesson(request: Request, lessonId: number): Promise<LessonData> {
@@ -56,18 +57,24 @@ export async function getLesson(request: Request, lessonId: number): Promise<Les
   const enrolled = user ? await hasEnrollment(user.id, Number(lesson.course_id)) : false;
   const canManage = !!user && ['admin', 'superadmin'].includes(user.role);
   if (!lesson.is_preview && !enrolled && !canManage) throw new ApiError(user ? 403 : 401, 'Enrol in this course to access this lesson.');
+  await assertLessonSequence(user,lessonId);
   let completed = false, position = 0;
   if (user && enrolled) {
     const [progress] = await database().execute<RowDataPacket[]>('SELECT completed, position_seconds FROM ir_progress WHERE user_id = ? AND lesson_id = ?', [user.id, lessonId]);
     completed = !!progress[0]?.completed;
     position = Number(progress[0]?.position_seconds || 0);
   }
+  const [resources]=await database().execute<RowDataPacket[]>('SELECT id,title,type,media_id,url FROM ir_lesson_resources WHERE lesson_id=? ORDER BY position,id',[lessonId]);
+  let assessmentId:number|undefined;
+  if(['quiz','assignment'].includes(lesson.type)) {
+    const [assessments]=await database().execute<RowDataPacket[]>(`SELECT id FROM ${lesson.type==='quiz'?'ir_quizzes':'ir_assignments'} WHERE lesson_id=?`,[lessonId]);assessmentId=assessments[0]?Number(assessments[0].id):undefined;
+  }
   return {
     id: Number(lesson.id), course_id: Number(lesson.course_id), chapter_id: Number(lesson.chapter_id),
     title: lesson.title, type: lesson.type, duration_seconds: Number(lesson.duration_seconds),
     is_preview: !!lesson.is_preview, position: Number(lesson.position), content: lesson.content ? safeContent(lesson.content, 'Lesson content') : null,
     source_url: lesson.media_id ? `/api/media/${Number(lesson.media_id)}` : lesson.external_url || null,
-    completed, position_seconds: position, enrolled,
+    completed, position_seconds: position, enrolled,assessment_id:assessmentId,resources:resources.map(row=>({id:Number(row.id),title:row.title,type:row.type,source_url:row.media_id?`/api/media/${row.media_id}`:row.url})),
   };
 }
 
@@ -75,6 +82,7 @@ export async function saveProgress(request: Request, lessonId: number, body: Rec
   const user = await requireLearner(request);
   const lesson = await getLesson(request, lessonId);
   if (!lesson.enrolled) throw new ApiError(403, 'Enrol in this course before saving progress.');
+  if(['quiz','assignment'].includes(lesson.type))throw new ApiError(403,'Complete the quiz or have your assignment reviewed to finish this lesson.');
   if (body.completed !== undefined && typeof body.completed !== 'boolean') throw new ApiError(422, 'Invalid completion status.');
   const position = body.position_seconds === undefined ? lesson.position_seconds : Number(body.position_seconds);
   if (!Number.isSafeInteger(position) || position < 0 || position > 604800) throw new ApiError(422, 'Invalid playback position.');

@@ -1,6 +1,6 @@
 # Inner Revealing web LMS
 
-The web LMS runs at https://ir.vishwalabs.com. Administrator sign-in is at https://ir.vishwalabs.com/admin/login. The separate marketing website remains in the repository root. This package does not deploy a mobile app or use Firebase.
+The web LMS runs at https://ir.vishwalabs.com in English, with no language selection popup or navigation control. Administrator sign-in is at https://ir.vishwalabs.com/admin/login. The separate marketing website remains in the repository root. This package does not deploy a mobile app or use Firebase.
 
 ## Run and deploy
 
@@ -19,6 +19,8 @@ Production binds to localhost behind Nginx. See [server instructions](deploy/REA
 
 ## Centre administration
 
+Staff sign-in opens the supplied eLMS dashboard at `/instructor/dashboard`, retaining its sidebar, overview cards, sales charts, course tables and original course creation wizard. Assignments, quiz reports, reviews, coupons, earnings, refunds, notifications and teaching team pages use local MySQL endpoints. Centre settings, users, manual order verification and integrations are accessible through **Centre administration**.
+
 Superadmins and admins can manage real courses and curriculum, upload images/video/audio/PDFs, publish or archive courses, manage people and enrolments, review manual payments, and edit pages, FAQs, contact enquiries and centre settings. Superadmins manage top-level roles and encrypted payment/email integrations. Activity is recorded in the audit log; the last active superadmin is protected.
 
 Create the first superadmin only through the explicit server CLI. Set `BOOTSTRAP_EMAIL`, `BOOTSTRAP_NAME` and a unique `BOOTSTRAP_PASSWORD` (16–128 characters), then run `npm run admin:bootstrap`. There are no default credentials or seeded learner accounts. Existing account promotion/password rotation requires the explicit flags documented by the bootstrap script.
@@ -26,6 +28,8 @@ Create the first superadmin only through the explicit server CLI. Set `BOOTSTRAP
 Courses remain empty until the centre adds real content. Publishing requires complete course information, a thumbnail, an active author/category/language, and at least one complete published lesson. Uploaded lesson media is stored at `UPLOAD_DIR` outside the public web root and served only to authorised learners or as an explicit preview.
 
 ## Learning and payments
+
+The original course builder saves pricing, learning objectives, requirements, metadata and chapters, with protected video/audio/document uploads, quizzes and assignments. Quizzes are graded on the server against an attempt snapshot; assignment completion requires staff acceptance or an explicitly permitted skip. Sequential access applies to lessons, assessments and protected media. Drafts remain private, and publishing validates the curriculum. Coupon discounts are calculated from SQL prices and reserved transactionally. Refund and withdrawal records require real payment references; provider refunds require configured keys and explicit owner action. Teaching invitations are for existing staff and do not change global account roles.
 
 Learners can register/sign in, save practices, join free courses, use the cart for paid courses, resume lessons, track completion, and view their purchases and in-site updates. MySQL stores accounts, hashed sessions, courses, orders, enrolments, progress and notifications. Old demo cache is discarded; there is no vendor API fallback.
 
@@ -41,6 +45,9 @@ npm run test:backend
 npm run test:admin
 npm run test:learning
 npm run test:services
+npm run test:instructor
+npm run test:education
+npm run test:operations
 npm run build
 ```
 
