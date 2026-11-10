@@ -37,8 +37,8 @@ const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({ courseData: initi
   const settings = useSelector(settingsSelector)
 
   const [isClient, setIsClient] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [courseData, setCourseData] = useState<Course | undefined>();
+  const [loading, setLoading] = useState(!initialCourseData);
+  const [courseData, setCourseData] = useState<Course | undefined>(initialCourseData);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleFetchCourse = async () => {
@@ -58,10 +58,14 @@ const CourseDetailsPage: React.FC<CourseDetailsPageProps> = ({ courseData: initi
 
   useEffect(() => {
     setIsClient(true);
-    if (slug) {
+    if (initialCourseData) {
+      setCourseData(initialCourseData);
+      setLoading(false);
+    } else if (slug) {
+      setCourseData(undefined);
       handleFetchCourse();
     }
-  }, [slug]);
+  }, [slug, initialCourseData]);
 
   // instructor reviews & rating
   const instructorReviews = courseData?.instructor?.reviews;

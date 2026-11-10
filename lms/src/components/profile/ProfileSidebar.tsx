@@ -1,5 +1,6 @@
 "use client";
-import { getFirebaseAuth } from "@/utils/Firebase";
+import { logoutLocalSession } from "@/utils/localAuth";
+import { setCartData } from "@/redux/reducers/cartSlice";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation"; // Import usePathname
 import { useState } from "react"; // Import useState
@@ -16,7 +17,6 @@ import {
 } from "react-icons/lu"; // Using Lucide icons as an example
 import LogoutModal from "./LogoutModal"; // Import the LogoutModal component
 import { useTranslation } from '@/hooks/useTranslation';
-import { signOut } from "firebase/auth";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutSuccess, userDataSelector } from "@/redux/reducers/userSlice";
 import { logoutSuccess as logoutSuccessCoupon } from "@/redux/reducers/couponSlice";
@@ -40,9 +40,7 @@ type SidebarItem = {
 export default function ProfileSidebar({ myLearning }: { myLearning?: boolean }) {
 
   const userData = useSelector(userDataSelector) as UserDetails;
-  const isGoogleLogin = userData?.type === 'google'
   const { t } = useTranslation();
-  const auth = getFirebaseAuth()
   const dispatch = useDispatch();
   const pathname = usePathname();
   const router = useRouter();
@@ -51,7 +49,7 @@ export default function ProfileSidebar({ myLearning }: { myLearning?: boolean })
 
   const sidebarItems: SidebarItem[] = [
     { href: "/edit-profile", icon: BiEditAlt, label: t("edit_profile") },
-    ...(!isGoogleLogin ? [{ href: "/account-security", icon: LuLock, label: t("account_security") }] : []),
+    { href: "/account-security", icon: LuLock, label: t("account_security") },
     { href: "/billing-details", icon: PiClipboardTextBold, label: t("billing_details") },
     { href: "/my-learnings", icon: LuGraduationCap, label: t("my_learnings") },
     { href: "/my-wishlist", icon: FaRegBookmark, label: t("my_wishlist") },
@@ -77,22 +75,20 @@ export default function ProfileSidebar({ myLearning }: { myLearning?: boolean })
   const handleSignOut = async () => {
     try {
       await new Promise((resolve, reject) => {
-        (auth ? signOut(auth) : Promise.resolve())
+        logoutLocalSession()
           .then(() => {
             dispatch(logoutSuccess())
             dispatch(logoutSuccessCoupon())
             dispatch(resetTeamMemberData())
             dispatch(clearBillingDetails())
-            if (typeof window !== 'undefined') {
-              window.recaptchaVerifier = null
-            }
+            dispatch(setCartData(null))
             closeLogoutModal();
             toast.success(t("logout_successfully"))
             router.push('/')
             resolve(void 0) // Resolve the promise when signOut is successful
           })
           .catch(error => {
-            toast.error(error)
+            toast.error(error instanceof Error ? error.message : "Could not sign out. Please try again.")
             reject(error) // Reject the promise if there's an error
           })
       })

@@ -7,9 +7,9 @@ import "swiper/css/navigation";
 import "swiper/css/pagination";
 import 'react-quill-new/dist/quill.snow.css';
 import { Toaster } from "react-hot-toast";
-import PushNotificationLayout from "@/components/firebaseNotification/PushNotification";
 import Script from "next/script";
 import { cookies } from "next/headers";
+import { getSystemLanguages } from "@/server/catalogue";
 
 interface InitialLangData {
   code: string;
@@ -19,41 +19,16 @@ interface InitialLangData {
 }
 
 async function fetchInitialLanguage(langCode: string): Promise<InitialLangData | null> {
-  try {
-    const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-    const ENDPOINT = process.env.NEXT_PUBLIC_END_POINT;
-    const apiBase = `${BASE_URL}/${ENDPOINT}/system-languages`;
-
-    const allLangsRes = await fetch(`${apiBase}?system_type=web&code=`, {
-      next: { revalidate: 3600 },
-    });
-    if (!allLangsRes.ok) return null;
-    const allLangsData = await allLangsRes.json();
-    const languages = allLangsData?.data?.languages ?? [];
-
-    const targetLang = langCode
-      ? languages.find((l: { code: string }) => l.code === langCode)
-      : languages.find((l: { is_default: boolean }) => l.is_default);
-
-    if (!targetLang) return null;
-
-    const langRes = await fetch(`${apiBase}?system_type=web&code=${targetLang.code}`, {
-      next: { revalidate: 3600 },
-    });
-    if (!langRes.ok) return null;
-    const langData = await langRes.json();
-    const langDetails = langData?.data?.languages?.[0];
-    if (!langDetails) return null;
-
-    return {
-      code: langDetails.code,
-      isRTL: langDetails.is_rtl,
-      translations: langDetails.translations_web ?? {},
-      languages,
-    };
-  } catch {
-    return null;
-  }
+  const { languages } = await getSystemLanguages();
+  const target = languages.find((language) => language.code === langCode) ||
+    languages.find((language) => language.is_default);
+  if (!target) return null;
+  return {
+    code: target.code,
+    isRTL: target.is_rtl,
+    translations: target.translations_web,
+    languages,
+  };
 }
 
 const geist = Geist({
@@ -87,7 +62,7 @@ export default async function RootLayout({
         {initialLang && (
           <script
             dangerouslySetInnerHTML={{
-              __html: `window.__INITIAL_LANG__=${JSON.stringify(initialLang)};`,
+              __html: `window.__INITIAL_LANG__=${JSON.stringify(initialLang).replace(/</g, "\\u003c")};`,
             }}
           />
         )}
@@ -100,9 +75,7 @@ export default async function RootLayout({
               color: "#fff",
             },
           }} />
-          <PushNotificationLayout>
-            {children}
-          </PushNotificationLayout>
+          {children}
         </StoreProvider>
 
         {hasClarityProject && <Script

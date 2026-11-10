@@ -1,12 +1,6 @@
 export const getFeatureSectionsApiRoute = "/get-feature-sections";
 
-export const mobileLoginApiRoute = "/mobile-login";
-export const mobileResetPasswordApiRoute = "/mobile-reset-password";
-export const mobileRegistrationApiRoute = "/mobile-registration";
-export const userExistsApiRoute = "/user-exists";
-export const userSignupApiRoute = "/user-signup";
 export const promoCodeApiRoute = "/promo-code";
-export const changePasswordApiRoute = "/change-password";
 export const downloadInvoiceApiRoute = "/download-invoice";
 export const helpdeskGroupsApiRoute = "/helpdesk/groups";
 export const helpdeskCheckGroupApprovalApiRoute = "/helpdesk/check-group-approval";
@@ -41,7 +35,6 @@ export const getSliderApiRoute = "/get-sliders";
 export const getUserDetailsApiRoute = "/get-user-details";
 export const myLearningApiRoute = "/my-learning";
 export const billingDetailsApiRoute = "/billing-details";
-export const deleteAccountApiRoute = "/delete-account";
 export const cartAddApiRoute = "/cart/add";
 export const cartApplyPromoApiRoute = "/cart/apply-promo";
 export const getCartApiRoute = "/cart";

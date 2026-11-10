@@ -19,7 +19,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import SidebarFilterSheet from '@/components/responsiveComponents/coursedComponests/SidebarFilterSheet'
 import SortByFilterSheet from '@/components/responsiveComponents/coursedComponests/SortByFilterSheet'
 import { useTranslation } from '@/hooks/useTranslation';
-import DataNotFound from '@/components/commonComp/DataNotFound'
+import Link from 'next/link'
 
 interface CourseContentProps {
     cateSlug?: string
@@ -320,8 +320,10 @@ const CourseContent: React.FC<CourseContentProps> = ({ cateSlug, searchPage, sea
                         </div>
                         {/* No courses found */}
                         {courses.length === 0 && !loading && (
-                            <div className='flexCenter h-screen'>
-                                <DataNotFound />
+                            <div className='rounded-3xl border borderColor bg-white px-6 py-16 text-center space-y-4'>
+                                <h2 className='text-2xl font-semibold'>No courses available yet</h2>
+                                <p className='sectionPara max-w-lg mx-auto'>Inner Revealing courses will appear here when they are published. Contact our team to learn about current sessions.</p>
+                                <Link href='/contact-us' className='commonBtn inline-flex'>Contact Inner Revealing</Link>
                             </div>
                         )}
                         {/* Load More */}

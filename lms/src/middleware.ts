@@ -4,18 +4,21 @@ import { NextResponse, NextRequest } from 'next/server'
  * Middleware to handle authentication for private routes
  */
 export function middleware(request: NextRequest) {
-  const authToken = request.cookies.get('auth_token')?.value
+  // Instructor and management screens are unavailable until owner tools exist.
+  if (/^\/(?:instructor(?:\/|$)|create-course(?:\/|$)|become-instructor(?:\/|$)|my-teams(?:\/|$))/.test(request.nextUrl.pathname)) {
+    return NextResponse.redirect(new URL('/courses', request.url))
+  }
 
-  if (!authToken) {
-    return NextResponse.redirect(new URL('/logout', request.url))
+  const session = request.cookies.get('ir_session')?.value
+
+  if (!session) {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   // Create the response object
   const response = NextResponse.next()
 
-  // Attach token as Authorization header
-  response.headers.set('Authorization', `Bearer ${authToken}`)
-
+  // Every protected API validates the opaque session against MySQL.
   return response
 }
 
@@ -33,5 +36,6 @@ export const config = {
     '/delete-account',
     '/my-wallet',
     '/become-instructor/:path*',
+    '/my-teams/:path*',
   ],
 }

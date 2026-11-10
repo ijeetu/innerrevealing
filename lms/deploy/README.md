@@ -19,6 +19,7 @@ Copy `.env.example` to `.env` and configure the production values. Keep `.env` o
 cd /home/innerrevealing/htdocs/ir.vishwalabs.com
 export PATH=/opt/node22-v22.23.2/bin:$PATH
 npm ci --no-audit --no-fund
+npm run db:migrate
 npm run build
 # Run as root after a successful build:
 systemctl restart innerrevealing-lms
@@ -27,11 +28,13 @@ systemctl status innerrevealing-lms --no-pager
 
 Run dependency installation and builds as the site user. Keep the previous release or a backup before updating source. Logs are available with `journalctl -u innerrevealing-lms`.
 
-## Backend handoff
+## Local MySQL backend
 
-The supplied package contains no LMS backend. The initial web deployment uses the supplied vendor demo API at `https://elms.wrteam.me/api`. Its content, settings and available authentication methods are controlled by the vendor; this is not an Inner Revealing course database. Supply the actual eLMS backend URL and Firebase web configuration before accepting real learners, payments or course data.
+The web backend is part of this Next.js application and serves same-origin `/api` routes. The database runs locally at `127.0.0.1:3306`; the dedicated database is `irlmsdb` and the application user is `irlmsweb`. Its password is stored only in the server's protected `.env` file. Database credentials must never use a `NEXT_PUBLIC_` prefix or enter Git.
 
-Update `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_END_POINT`, and the Firebase variables, authorize `ir.vishwalabs.com` in the Firebase project, and allow this origin in backend CORS settings. Firebase sign-in and push notifications remain unavailable while their configuration is absent. Verify course listing, sign-in, enrolment and payments against the actual backend after rebuilding.
+Set `SITE_URL=https://ir.vishwalabs.com` and the `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` variables before running migrations. The schema includes local users, hashed cookie sessions and courses. Migrations do not seed courses or accounts. Never import demo data or configure a vendor API fallback.
+
+The frontend clears the old vendor application's persisted browser data when moving to this backend. Firebase, social-provider sign-in, phone OTP and push notifications are removed from this web launch. Real course content and payment/mail services can be configured separately; unsupported operations fail explicitly instead of simulating success.
 
 ## Checks
 

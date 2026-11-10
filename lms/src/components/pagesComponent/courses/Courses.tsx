@@ -40,7 +40,7 @@ const Courses: React.FC = () => {
               </div>
               <div className="flexColCenter items-start gap-2">
                 <h1 className="font-semibold text-2xl sm:text-3xl md:text-3xl lg:text-[40px]">
-                  Meditation practices
+                  Courses and practices
                 </h1>
                 <p className="sectionPara lg:w-[52%]">
                   Make time to pause, reconnect and grow. Explore a practice that feels right for you.
@@ -49,14 +49,14 @@ const Courses: React.FC = () => {
             </div>
           </div>
           <nav aria-label="Practice areas" className="container flex flex-wrap gap-3 pt-6">
-            <Link href='/courses/search/meditation' aria-current='page' className='commonBtn'>Meditation</Link>
+            <Link href='/courses/search/meditation' className='commonBtn'>Meditation</Link>
             <Link href='/courses/search/yoga' className='rounded-full border borderColor bg-white px-6 py-3 font-medium hover:primaryColor'>Yoga</Link>
             <Link href='/courses/search/mindfulness' className='rounded-full border borderColor bg-white px-6 py-3 font-medium hover:primaryColor'>Personal growth</Link>
           </nav>
         </div>
 
         <Suspense fallback={<CourseContentLoading />}>
-          <CourseContent search="meditation" />
+          <CourseContent />
         </Suspense>
       </div>
     </Layout>

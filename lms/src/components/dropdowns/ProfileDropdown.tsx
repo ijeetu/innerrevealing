@@ -1,5 +1,6 @@
 'use client'
-import { getFirebaseAuth } from "@/utils/Firebase";
+import { logoutLocalSession } from "@/utils/localAuth";
+import { setCartData } from "@/redux/reducers/cartSlice";
 import React, { useState } from 'react'
 import { RiEdit2Line } from "react-icons/ri";
 import { BiBookAlt, BiLogOut } from "react-icons/bi";
@@ -29,7 +30,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { logoutSuccess, userDataSelector } from '@/redux/reducers/userSlice';
 import { logoutSuccess as logoutSuccessCoupon } from "@/redux/reducers/couponSlice";
 import { IoCaretDownSharp } from 'react-icons/io5';
-import { signOut } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
@@ -56,7 +56,6 @@ const ProfileDropdown = ({ isMobileNav, isInstructor }: { isMobileNav?: boolean,
     const router = useRouter()
     const dispatch = useDispatch()
     const { t } = useTranslation();
-    const authentication = getFirebaseAuth()
 
     const [isProfileOpen, setIsProfileOpen] = useState<boolean>(false)
     const [logoutConfrm, setLogoutConfrm] = useState<boolean>(false)
@@ -121,26 +120,24 @@ const ProfileDropdown = ({ isMobileNav, isInstructor }: { isMobileNav?: boolean,
         setImageError(false);
     }, [userData?.profile]);
 
-    const handleSignOut = async (modal: string) => {
+    const handleSignOut = async () => {
         try {
             await new Promise((resolve, reject) => {
-                (authentication ? signOut(authentication) : Promise.resolve())
+                logoutLocalSession()
                     .then(() => {
                         dispatch(logoutSuccess())
                         dispatch(logoutSuccessCoupon())
                         dispatch(resetTeamMemberData())
                         dispatch(clearBillingDetails())
-                        if (typeof window !== 'undefined') {
-                            window.recaptchaVerifier = null
-                        }
-                        toast.success(modal === 'deleteAcc' ? t("account_deleted_successfully") : t("logout_successfully"))
+                        dispatch(setCartData(null))
+                        toast.success(t("logout_successfully"))
                         router.push(`/?lang=${currentLanguageCode}`)
                         setLogoutConfrm(false)
                         setIsProfileOpen(false)
                         resolve(void 0) // Resolve the promise when signOut is successful
                     })
                     .catch(error => {
-                        toast.error(error)
+                        toast.error(error instanceof Error ? error.message : "Could not sign out. Please try again.")
                         reject(error) // Reject the promise if there's an error
                     })
             })
@@ -405,6 +402,11 @@ const ProfileDropdown = ({ isMobileNav, isInstructor }: { isMobileNav?: boolean,
                                             <span>{t("edit_profile")}</span>
                                         </div>
                                     </DropdownMenuItem>
+                                    {[{ path: "account-security", label: "Account security" }, { path: "delete-account", label: "Delete account" }].map((item) => (
+                                        <DropdownMenuItem key={item.path} onClick={() => handleRedirectTo(item.path)} className="px-4 py-2 cursor-pointer hover:!primaryColor hover:!primaryLightBg">
+                                            {item.label}
+                                        </DropdownMenuItem>
+                                    ))}
                                     <DropdownMenuItem asChild
                                         className="px-4 py-2 cursor-pointer hover:!primaryColor hover:!primaryLightBg focus:!primaryColor"
                                         onClick={() => handleRedirectTo('transaction-history')}
@@ -496,7 +498,7 @@ const ProfileDropdown = ({ isMobileNav, isInstructor }: { isMobileNav?: boolean,
                             {t("are_you_sure_you_want_to_log_out")}
                         </AlertDialogDescription>
                         <AlertDialogFooter className=''>
-                            <AlertDialogAction className='primaryBg text-white' onClick={() => handleSignOut('logoutAcc')}>{t("yes")}</AlertDialogAction>
+                            <AlertDialogAction className='primaryBg text-white' onClick={() => handleSignOut()}>{t("yes")}</AlertDialogAction>
                             <AlertDialogCancel onClick={() => setLogoutConfrm(false)}>{t("cancel")}</AlertDialogCancel>
                         </AlertDialogFooter>
                     </AlertDialogContent>

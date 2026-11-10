@@ -1,272 +1,67 @@
-"use client"
-import Layout from "@/components/layout/Layout";
-import ProfileSidebar from "@/components/profile/ProfileSidebar";
-import Link from "next/link";
-import { MdKeyboardArrowRight } from "react-icons/md";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { changePassword } from "@/utils/api/auth/changePassword";
-import toast from "react-hot-toast";
-import { useTranslation } from "@/hooks/useTranslation";
-import { useState } from "react";
-import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
-import { useSelector } from "react-redux";
-import { isRTLSelector } from "@/redux/reducers/languageSlice";
+"use client";
 
+import { useState, type FormEvent } from "react";
+import { useDispatch } from "react-redux";
+import { useRouter } from "next/navigation";
+import AccountPanel from "@/components/profile/AccountPanel";
+import { Input } from "@/components/ui/input";
+import { changeLocalPassword } from "@/utils/localAuth";
+import { logoutSuccess } from "@/redux/reducers/userSlice";
+import { logoutSuccess as clearCoupons } from "@/redux/reducers/couponSlice";
+import { resetTeamMemberData } from "@/redux/instructorReducers/teamMemberSlice";
+import { clearBillingDetails } from "@/redux/reducers/billingDeatilsSlice";
+import { setCartData } from "@/redux/reducers/cartSlice";
+import { setIsLoginModalOpen } from "@/redux/reducers/helpersReducer";
+import toast from "react-hot-toast";
 
 export default function AccountSecurityPage() {
+  const dispatch = useDispatch();
+  const router = useRouter();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
 
-  const { t } = useTranslation();
-  const isRTL = useSelector(isRTLSelector);
-
-  const [showPassword, setShowPassword] = useState({
-    old_password: false,
-    new_password: false,
-    new_password_confirmation: false,
-  });
-
-  // Zod schema for password change form validation
-  const changePasswordSchema = z
-    .object({
-      old_password: z.string().min(1, t("old_password_required")),
-      new_password: z
-        .string()
-        .min(8, t("password_min_length_8")).regex(/(?=.*[A-Z])/, {
-          message: t("password_uppercase_required"),
-        })
-        .regex(/(?=.*\d)/, {
-          message: t("password_number_required"),
-        })
-        .regex(/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/, {
-          message: t("password_special_char_required"),
-        }),
-      new_password_confirmation: z.string().min(8, t("password_min_length_8")).regex(/(?=.*[A-Z])/, {
-        message: t("password_uppercase_required"),
-      })
-        .regex(/(?=.*\d)/, {
-          message: t("password_number_required"),
-        })
-        .regex(/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~])/, {
-          message: t("password_special_char_required"),
-        }),
-    })
-    .refine((data) => data.new_password === data.new_password_confirmation, {
-      message: t("new_passwords_dont_match"),
-      path: ["new_password_confirmation"],
-    });
-
-  // Initialize form with react-hook-form and zod validation
-  const form = useForm<z.infer<typeof changePasswordSchema>>({
-    resolver: zodResolver(changePasswordSchema),
-    defaultValues: {
-      old_password: "",
-      new_password: "",
-      new_password_confirmation: "",
-    },
-  });
-
-  // Function to handle change password
-  // This follows the same simple pattern as handleStartQuiz in StartQuiz.tsx
-  const handleChangePassword = async (
-    values: z.infer<typeof changePasswordSchema>
-  ) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pending) return;
+    setError("");
+    if (password !== confirmation) { setError("Your new passwords do not match."); return; }
+    setPending(true);
     try {
-      // Call the changePassword API
-      const response = await changePassword({
-        old_password: values.old_password,
-        new_password: values.new_password,
-        new_password_confirmation: values.new_password_confirmation,
-      });
+      const response = await changeLocalPassword(currentPassword, password, confirmation);
+      dispatch(logoutSuccess());
+      dispatch(clearCoupons());
+      dispatch(resetTeamMemberData());
+      dispatch(clearBillingDetails());
+      dispatch(setCartData(null));
+      toast.success(response.message || "Password updated. Please sign in again.");
+      router.replace("/");
+      dispatch(setIsLoginModalOpen(true));
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Could not update your password.");
+    } finally { setPending(false); }
+  };
 
-      if (response) {
-        // Check if API returned an error
-        if (response.error) {
-          console.log("API error:", response.message);
-          toast.error(response.message || "Failed to change password");
-        } else {
-          // Success - password changed successfully
-          toast.success(response.message || "Password changed successfully!");
-
-          // Reset form after successful password change
-          form.reset();
-        }
-      } else {
-        console.log("response is null in component", response);
-        toast.error("Failed to change password. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error changing password:", error);
-      toast.error("Failed to change password. Please try again.");
-    }
-  }
-
-  return (
-    <Layout>
-      <div className="sectionBg py-8 md:py-12 border-b border-gray-200">
-        <div className="container space-y-4">
-          <div className="flexColCenter items-start gap-2">
-            <h1 className="font-semibold text-2xl sm:text-3xl md:text-3xl lg:text-[40px]">
-              {t("account_security")}
-            </h1>
-          </div>
-          <div className="bg-white rounded-full py-2 px-4 flex-wrap inline-flex items-center gap-1 max-w-full">
-            <Link href={"/"} className="primaryColor" title="Home">
-              {t("home")}
-            </Link>
-            <span>
-              <MdKeyboardArrowRight size={22} />
-            </span>
-            <span>{t("my_profile")}</span>
-            <span>
-              <MdKeyboardArrowRight size={22} />
-            </span>
-            <span>{t("account_security")}</span>
-          </div>
-        </div>
+  return <AccountPanel title="Account security" description="Keep your account secure with a strong, unique password.">
+    <form onSubmit={submit} className="space-y-5 max-w-xl">
+      <h2 className="text-xl font-semibold">Change password</h2>
+      <div className="space-y-2">
+        <label htmlFor="current-password" className="text-sm font-medium">Current password</label>
+        <Input id="current-password" type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required maxLength={128} disabled={pending} />
       </div>
-
-      <div className="sectionBg">
-        <div className="container py-8 md:py-12">
-          <div className="flex flex-col lg:flex-row gap-6 items-start">
-            <ProfileSidebar />
-
-            <div className="bg-white flex-1 w-full space-y-8 rounded-[10px]">
-              <h2 className="text-xl font-semibold text-gray-800 py-4 px-6 mb-0">
-                {t("account_security")}
-              </h2>
-
-              <hr className="border-gray-200 mb-2" />
-
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(handleChangePassword)}
-                  className="px-6 py-3 space-y-6"
-                >
-                  <div className="grid grid-cols-1 gap-6">
-                    <FormField
-                      control={form.control}
-                      name="old_password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="block text-sm font-medium text-[#010211] requireField">
-                            {t("old_password")}
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword.old_password ? "text" : "password"}
-                                placeholder={t("enter_old_password")}
-                                className={`w-full sectionBg rounded-[5px] p-3 ${isRTL ? "pl-10 text-right" : "pr-10 text-left"} border border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm`}
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword({ ...showPassword, old_password: !showPassword.old_password })}
-                                className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 -translate-y-1/2 text-gray-500 bg-[#F8F8F9]`}
-                              >
-                                {showPassword.old_password ? (
-                                  <IoEyeOutline size={20} />
-                                ) : (
-                                  <IoEyeOffOutline size={20} />
-                                )}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="new_password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="block text-sm font-medium text-[#010211] requireField">
-                            {t("new_password")}
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword.new_password ? "text" : "password"}
-                                placeholder={t("enter_new_password")}
-                                className={`sectionBg w-full rounded-[5px] p-3 ${isRTL ? "pl-10 text-right" : "pr-10 text-left"} border border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm`}
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword({ ...showPassword, new_password: !showPassword.new_password })}
-                                className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 -translate-y-1/2 text-gray-500 bg-[#F8F8F9]`}
-                              >
-                                {showPassword.new_password ? (
-                                  <IoEyeOutline size={20} />
-                                ) : (
-                                  <IoEyeOffOutline size={20} />
-                                )}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="new_password_confirmation"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="block text-sm font-medium text-[#010211] requireField">
-                            {t("re_enter_new_password")}
-                          </FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showPassword.new_password_confirmation ? "text" : "password"}
-                                placeholder={t("re_enter_new_password")}
-                                className={`sectionBg w-full rounded-[5px] p-3 ${isRTL ? "pl-10 text-right" : "pr-10 text-left"} border border-gray-300 focus:ring-blue-500 focus:border-blue-500 text-sm`}
-                                {...field}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword({ ...showPassword, new_password_confirmation: !showPassword.new_password_confirmation })}
-                                className={`absolute ${isRTL ? "left-3" : "right-3"} top-1/2 -translate-y-1/2 text-gray-500 bg-[#F8F8F9]`}
-                              >
-                                {showPassword.new_password_confirmation ? (
-                                  <IoEyeOutline size={20} />
-                                ) : (
-                                  <IoEyeOffOutline size={20} />
-                                )}
-                              </button>
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <div className="flex justify-center mb-4">
-                    <button
-                      type="submit"
-                      className="commonBtn max-[400px]:w-full"
-                    >
-                      {t("change_password")}
-                    </button>
-                  </div>
-                </form>
-              </Form>
-            </div>
-          </div>
-        </div>
+      <div className="space-y-2">
+        <label htmlFor="new-password" className="text-sm font-medium">New password</label>
+        <Input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} maxLength={128} disabled={pending} aria-describedby="new-password-help" />
+        <p id="new-password-help" className="text-xs text-muted-foreground">Use 10 or more characters. You will sign in again after this change.</p>
       </div>
-    </Layout>
-  );
+      <div className="space-y-2">
+        <label htmlFor="confirm-new-password" className="text-sm font-medium">Confirm new password</label>
+        <Input id="confirm-new-password" type="password" autoComplete="new-password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required minLength={10} maxLength={128} disabled={pending} />
+      </div>
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      <button type="submit" className="ir-lms-register disabled:opacity-60" disabled={pending}>{pending ? "Updating…" : "Update password"}</button>
+    </form>
+  </AccountPanel>;
 }

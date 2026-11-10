@@ -1,10 +1,10 @@
 'use client'
-import { getFirebaseAuth } from "@/utils/Firebase";
+import { logoutLocalSession } from "@/utils/localAuth";
+import { setCartData } from "@/redux/reducers/cartSlice";
 import React, { useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutSuccess, userDataSelector } from '@/redux/reducers/userSlice';
 import { logoutSuccess as logoutSuccessCoupon } from "@/redux/reducers/couponSlice";
-import { signOut } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FaAngleRight, FaRegCreditCard } from 'react-icons/fa';
 import Link from 'next/link';
-import { FiUser } from 'react-icons/fi';
 import { RiEdit2Line } from 'react-icons/ri';
 import { BiBookAlt, BiLogOut } from 'react-icons/bi';
 import { BsBell, BsBookmark, BsCart3 } from 'react-icons/bs';
@@ -51,10 +50,8 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ setIsOpen }) => {
     const navigate = useRouter()
     const dispatch = useDispatch()
 
-    const authentication = getFirebaseAuth()
 
     const [logoutConfrm, setLogoutConfrm] = useState<boolean>(false)
-    const [deleteAccConfrm, setDeleteAccConfrm] = useState<boolean>(false)
     const [imageError, setImageError] = useState<boolean>(false)
 
     // Array of background colors for fallback avatar
@@ -119,26 +116,23 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ setIsOpen }) => {
         setImageError(false);
     }, [userData?.profile]);
 
-    const handleSignOut = async (modal: string) => {
+    const handleSignOut = async () => {
         try {
             await new Promise((resolve, reject) => {
-                (authentication ? signOut(authentication) : Promise.resolve())
+                logoutLocalSession()
                     .then(() => {
                         dispatch(logoutSuccess())
                         dispatch(logoutSuccessCoupon())
                         dispatch(resetTeamMemberData())
                         dispatch(clearBillingDetails())
-                        if (typeof window !== 'undefined') {
-                            window.recaptchaVerifier = null
-                        }
-                        toast.success(modal === 'deleteAcc' ? t("account_deleted_successfully") : t("logout_successfully"))
+                        dispatch(setCartData(null))
+                        toast.success(t("logout_successfully"))
                         navigate.push('/')
                         setLogoutConfrm(false)
-                        setDeleteAccConfrm(false)
                         resolve(void 0) // Resolve the promise when signOut is successful
                     })
                     .catch(error => {
-                        toast.error(error)
+                        toast.error(error instanceof Error ? error.message : "Could not sign out. Please try again.")
                         reject(error) // Reject the promise if there's an error
                     })
             })
@@ -147,18 +141,7 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ setIsOpen }) => {
         }
     }
 
-    const deleteAccount = async () => {
-        console.log('delete account')
-    }
-
-    const handleAlert = async (modal: string) => {
-        if (modal === 'deleteAcc') {
-            setDeleteAccConfrm(true)
-        }
-        else {
-            setLogoutConfrm(true)
-        }
-    }
+    const handleAlert = () => setLogoutConfrm(true);
 
     // Check if we should show fallback avatar
     const shouldShowFallback = !userData?.profile || imageError;
@@ -195,38 +178,6 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ setIsOpen }) => {
                 <SheetContent side="left" className='px-4'>
                     <SheetTitle className="hidden">{t("sort_by")}</SheetTitle>
                     <div className="mt-14 pt-4 border-t borderColor">
-                        <div className='space-y-2 border-b borderColor pb-2 mb-3'>
-                            <div className="text-gray-500 font-normal">
-                                {t("instructor")}
-                            </div>
-                            <SheetClose asChild className="flex items-center gap-2 py-2 font-semibold cursor-pointer hover:!primaryColor" onClick={() => setIsOpen(false)}>
-                                {(() => {
-                                    const instructorStatus = userData?.instructor_process_status;
-                                    const isInstructor = userData?.is_instructor;
-                                    let href = "";
-                                    let label = t("become_an_instructor");
-
-                                    if (isInstructor && instructorStatus === "approved") {
-                                        href = `/instructor/dashboard?lang=${currentLanguageCode}`;
-                                        label = t("switch_to_instructor");
-                                    } else if (userData?.instructor_details) {
-                                        href = `/become-instructor/application?lang=${currentLanguageCode}`;
-                                    } else {
-                                        href = `/become-instructor/process?lang=${currentLanguageCode}`;
-                                    }
-
-                                    return (
-                                        <Link href={href} title={label} className='flex items-center justify-start gap-2'>
-                                            <span className="text-gray-500">
-                                                <FiUser size={18} />
-                                            </span>
-                                            <span>{label}</span>
-                                        </Link>
-                                    );
-                                })()}
-                            </SheetClose>
-                        </div>
-
                         <div className='space-y-2 border-b borderColor pb-2 mb-3'>
                             <div className="text-gray-500 font-normal">
                                 {t("profile_section")}
@@ -287,11 +238,19 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ setIsOpen }) => {
                             </SheetClose>
                         </div>
 
+                        <div className="space-y-2 border-b borderColor pb-3 mb-3">
+                            {[{ href: "/account-security", label: "Account security" }, { href: "/delete-account", label: "Delete account" }].map((item) => (
+                                <SheetClose asChild key={item.href} onClick={() => setIsOpen(false)}>
+                                    <Link href={item.href} className="flex items-center justify-between py-2 font-medium hover:primaryColor">{item.label}<FaAngleRight size={12} /></Link>
+                                </SheetClose>
+                            ))}
+                        </div>
+
                         <div className='space-y-2'>
                             <div className="text-gray-500 font-normal">
                                 {t("logout_section")}
                             </div>
-                            <div className="flex items-center gap-2 py-2 font-semibold cursor-pointer hover:primaryColor" onClick={() => handleAlert('logoutAcc')}>
+                            <div className="flex items-center gap-2 py-2 font-semibold cursor-pointer hover:primaryColor" onClick={() => handleAlert()}>
                                 <div className='flex items-center justify-start gap-2'>
                                     <span className="">
                                         <BiLogOut size={18} />
@@ -317,28 +276,13 @@ const ProfileSheet: React.FC<ProfileSheetProps> = ({ setIsOpen }) => {
                             {t('logout_confirm')}
                         </AlertDialogDescription>
                         <AlertDialogFooter>
-                            <AlertDialogAction className='primaryBg text-white' onClick={() => handleSignOut('logoutAcc')}>{t('yes_button')}</AlertDialogAction>
+                            <AlertDialogAction className='primaryBg text-white' onClick={() => handleSignOut()}>{t('yes_button')}</AlertDialogAction>
                             <AlertDialogCancel onClick={() => setLogoutConfrm(false)}>{t('cancel_button')}</AlertDialogCancel>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
 
-                {/* delete acc alert */}
-                <AlertDialog open={deleteAccConfrm} onOpenChange={setDeleteAccConfrm}>
-                    <AlertDialogContent className='bg-white'>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className='hidden'></AlertDialogTitle>
-                        </AlertDialogHeader>
-                        <AlertDialogDescription>
-                            <p>{t('delete_account_confirm')}</p>
-                        </AlertDialogDescription>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel onClick={() => setDeleteAccConfrm(false)}>{t('cancel_button')}</AlertDialogCancel>
-                            <AlertDialogAction className='bg-[#DB3D26] text-white' onClick={() => deleteAccount()}>{t('yes_button')}</AlertDialogAction>
-                            <AlertDialogCancel onClick={() => setDeleteAccConfrm(false)}>{t('cancel_button')}</AlertDialogCancel>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
+
             </div>
         </div>
     );

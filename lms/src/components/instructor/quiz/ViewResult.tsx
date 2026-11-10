@@ -75,7 +75,7 @@ const ViewResult: React.FC<ViewResultProps> = ({
     }
   }, [attemptId]);
 
-  // Use fetched data or fallback to mock data
+  // Display only the result returned by the API.
   const quizSummary = quizResultDetails?.quiz_summary;
   const questions = quizResultDetails?.questions || [];
   return (

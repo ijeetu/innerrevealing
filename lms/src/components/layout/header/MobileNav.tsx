@@ -1,5 +1,6 @@
 "use client";
-import { getFirebaseAuth } from "@/utils/Firebase";
+import { logoutLocalSession } from "@/utils/localAuth";
+import { setCartData } from "@/redux/reducers/cartSlice";
 import React, { useEffect, useState } from "react";
 import {
   Sheet,
@@ -17,7 +18,6 @@ import { FaAngleRight, FaRegUser } from "react-icons/fa6";
 import BrandLogo from "./BrandLogo";
 import ProfileSheet from "@/components/responsiveComponents/ProfileSheet";
 import { FaAngleDown, FaAngleUp, FaCheck } from "react-icons/fa";
-import { signOut } from 'firebase/auth';
 import { logoutSuccess } from '@/redux/reducers/userSlice';
 import { logoutSuccess as logoutSuccessCoupon } from "@/redux/reducers/couponSlice";
 import { useRouter } from "next/navigation";
@@ -69,7 +69,6 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
   const navigate = useRouter()
   const dispatch = useDispatch()
 
-  const authentication = getFirebaseAuth()
 
   const [logoutConfrm, setLogoutConfrm] = useState<boolean>(false)
 
@@ -86,25 +85,23 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
     return totalHeight;
   };
 
-  const handleSignOut = async (modal: string) => {
+  const handleSignOut = async () => {
     try {
       await new Promise((resolve, reject) => {
-        (authentication ? signOut(authentication) : Promise.resolve())
+        logoutLocalSession()
           .then(() => {
             dispatch(logoutSuccess())
             dispatch(logoutSuccessCoupon())
             dispatch(resetTeamMemberData())
             dispatch(clearBillingDetails())
-            if (typeof window !== 'undefined') {
-              window.recaptchaVerifier = null
-            }
-            toast.success(modal === 'deleteAcc' ? t("account_deleted_successfully") : t("logout_successfully"))
+            dispatch(setCartData(null))
+            toast.success(t("logout_successfully"))
             navigate.push(`/?lang=${currentLanguageCode}`)
             setLogoutConfrm(false)
             resolve(void 0) // Resolve the promise when signOut is successful
           })
           .catch(error => {
-            toast.error(error)
+            toast.error(error instanceof Error ? error.message : "Could not sign out. Please try again.")
             reject(error) // Reject the promise if there's an error
           })
       })
@@ -175,8 +172,8 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
                 <ProfileSheet setIsOpen={setIsOpen} />
                 :
                 <div className="flexCenter flex-col w-full gap-4 sm:border-l borderColor h-full py-3 sm:pl-6">
-                  <button className="cursor-pointer" onClick={openSignInModal}>{t("sign_in")}</button>
-                  <button className="ir-lms-register w-full flexCenter gap-2" onClick={openRegisterModal}>
+                  <button className="cursor-pointer" onClick={() => { setIsOpen(false); openSignInModal(); }}>{t("sign_in")}</button>
+                  <button className="ir-lms-register w-full flexCenter gap-2" onClick={() => { setIsOpen(false); openRegisterModal(); }}>
                     <FaRegUser />
                     <span>
                       Join the practice
@@ -284,7 +281,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ openSignInModal, openRegisterModa
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setLogoutConfrm(false)}>{t("cancel")}</AlertDialogCancel>
-            <AlertDialogAction className='primaryBg text-white' onClick={() => handleSignOut('logoutAcc')}>{t("yes")}</AlertDialogAction>
+            <AlertDialogAction className='primaryBg text-white' onClick={() => handleSignOut()}>{t("yes")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

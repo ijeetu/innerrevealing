@@ -6,25 +6,19 @@ import MobileNav from "./MobileNav";
 import { usePathname } from "next/navigation";
 import SignInModal from "@/components/auth/email/SignInModal";
 import { isLoginSelector } from "@/redux/reducers/userSlice";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import ProfileDropdown from "@/components/dropdowns/ProfileDropdown";
 import NotificationDropdown from "@/components/dropdowns/NotificationDropdown";
 import { useIsMobile } from "@/hooks/use-mobile";
-import CartDropdown from "@/components/dropdowns/CartDropdown";
 import BrandLogo from "./BrandLogo";
 import SearchDropdown from "@/components/dropdowns/SearchDropdown";
 import { useTranslation } from "@/hooks/useTranslation";
-import { getCartItems } from "@/utils/api/user/get-cart/getCart";
-import toast from "react-hot-toast";
-import { extractErrorMessage } from "@/utils/helpers";
-import { setCartData } from "@/redux/reducers/cartSlice";
 import { isLoginModalOpenSelector } from "@/redux/reducers/helpersReducer";
 import { currentLanguageSelector } from "@/redux/reducers/languageSlice";
 import { PiUserBold } from "react-icons/pi";
 
 const Header: React.FC = () => {
   const pathname = usePathname();
-  const dispatch = useDispatch();
   const { t } = useTranslation();
   const isLoginModalOpen = useSelector(isLoginModalOpenSelector);
   const currentLanguageCode = useSelector(currentLanguageSelector);
@@ -41,37 +35,6 @@ const Header: React.FC = () => {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-
-  const getAllCartItems = async () => {
-    try {
-      const response = await getCartItems();
-      if (response) {
-        // Check if API returned an error (error: true in response)
-        if (!response.error) {
-          if (response.data) {
-            dispatch(setCartData(response.data));
-          }
-        } else {
-          console.log("API error:", response.message);
-          toast.error(response.message || "Failed to fetch cart items");
-          dispatch(setCartData(null));
-        }
-      } else {
-        console.log("response is null in component", response);
-        dispatch(setCartData(null));
-      }
-    } catch (error) {
-      extractErrorMessage(error);
-      dispatch(setCartData(null));
-    }
-  };
-
-  useEffect(() => {
-    if (isLogin) {
-      getAllCartItems();
-    }
-  }, [isLogin]);
 
 
   useEffect(() => {
@@ -134,7 +97,6 @@ const Header: React.FC = () => {
                   <PiUserBold size={22} className="secondaryColor" />
                 </Link>
               )}
-              {isMobile && <CartDropdown isMobileNav={true} />}
             </div>
           </div>
 
@@ -145,7 +107,6 @@ const Header: React.FC = () => {
             </div>
             <div className="hidden md:flex items-center gap-4 shrink-0">
               {isLogin && !isMobile && <NotificationDropdown />}
-              {!isMobile && <CartDropdown />}
             </div>
           </div>
         </div>
@@ -156,7 +117,6 @@ const Header: React.FC = () => {
           setIsRegisterOptionModalOpen={setIsRegisterOptionModalOpen}
           isRegisterOptionModalOpen={isRegisterOptionModalOpen}
         />
-        <div id="recaptcha-container" className="fixed z-[99]" />
       </header>
     )
   );

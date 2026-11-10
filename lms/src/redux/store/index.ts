@@ -20,9 +20,16 @@ import courseLanguageReducer from "../reducers/courseLanguageSlice";
 import billingDetailsReducer from "../reducers/billingDeatilsSlice";
 import invitorsReducer from "../reducers/invitorsSlice";
 const persistConfig = {
-  key: "e-lms",
+  key: "inner-revealing-mysql-v1",
+  version: 1,
   storage,
+  blacklist: ["user"],
 };
+
+// Discard the previous vendor-backed catalogue, cart, settings and identity.
+if (typeof window !== "undefined") {
+  void storage.removeItem("persist:e-lms");
+}
 
 // example
 const rootReducer = combineReducers({

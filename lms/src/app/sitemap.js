@@ -4,7 +4,7 @@
  * @returns {import('next').MetadataRoute.Sitemap} The sitemap configuration
  */
 export default async function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_WEB_URL || "https://elms-web.wrteam.me";
+  const baseUrl = process.env.NEXT_PUBLIC_WEB_URL || "https://ir.vishwalabs.com";
 
   // Define static routes based on actual app structure
   const staticRoutes = [
@@ -27,12 +27,6 @@ export default async function sitemap() {
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/instructors`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.8,
-    },
-    {
       url: `${baseUrl}/contact-us`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -43,18 +37,6 @@ export default async function sitemap() {
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/become-instructor`,
-      lastModified: new Date(),
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${baseUrl}/cart`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
-      priority: 0.5,
     },
   ];
 
